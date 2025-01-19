@@ -171,6 +171,22 @@ class ApiClient {
   async delete(url, config = {}) {
     return this.axiosInstance.delete(url, config);
   }
+
+  // Kullanıcı listesini getir
+  async fetchUsers({ search = '', includeDetails = false } = {}) {
+    try {
+      const response = await this.axiosInstance.get('/users', {
+        params: {
+          search,
+          includeDetails
+        }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Kullanıcı listesi alınamadı:', error);
+      throw error;
+    }
+  }
 }
 
 export default new ApiClient();

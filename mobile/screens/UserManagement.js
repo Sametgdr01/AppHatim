@@ -6,7 +6,8 @@ import {
   TouchableOpacity, 
   StyleSheet, 
   RefreshControl, 
-  Alert 
+  Alert,
+  ActivityIndicator
 } from 'react-native';
 import { 
   Avatar, 
@@ -17,7 +18,7 @@ import {
   Searchbar 
 } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import * as api from '../services/api';
+import api from '../services/api';
 
 const UserManagement = ({ navigation }) => {
   const [users, setUsers] = useState([]);
@@ -36,34 +37,27 @@ const UserManagement = ({ navigation }) => {
         includeDetails: true
       });
 
-      // gudersamet@gmail.com kullanıcısını her zaman listenin başına koy
-      const sametUserIndex = fetchedUsers.findIndex(user => user.email === 'gudersamet@gmail.com');
-      if (sametUserIndex !== -1) {
-        const sametUser = fetchedUsers.splice(sametUserIndex, 1)[0];
-        fetchedUsers.unshift({
-          ...sametUser,
-          role: 'superadmin' // Her zaman super admin olarak göster
-        });
-      }
+      if (Array.isArray(fetchedUsers)) {
+        // gudersamet@gmail.com kullanıcısını her zaman listenin başına koy
+        const sametUserIndex = fetchedUsers.findIndex(user => user.email === 'gudersamet@gmail.com');
+        if (sametUserIndex !== -1) {
+          const sametUser = fetchedUsers.splice(sametUserIndex, 1)[0];
+          fetchedUsers.unshift({
+            ...sametUser,
+            role: 'superadmin' // Her zaman super admin olarak göster
+          });
+        }
 
-      setUsers(fetchedUsers);
+        setUsers(fetchedUsers);
+      } else {
+        console.error('Kullanıcı listesi dizi değil:', fetchedUsers);
+        Alert.alert('Hata', 'Kullanıcı listesi alınamadı');
+        setUsers([]);
+      }
     } catch (error) {
-      // Detaylı hata mesajı
-      Alert.alert(
-        'Kullanıcı Listesi Hatası', 
-        error.message || 'Kullanıcılar yüklenemedi. Lütfen daha sonra tekrar deneyin.',
-        [
-          { 
-            text: 'Tekrar Dene', 
-            onPress: () => fetchUserList() 
-          },
-          { 
-            text: 'İptal', 
-            style: 'cancel' 
-          }
-        ]
-      );
-      console.error('Kullanıcı listesi getirme hatası:', error);
+      console.error('Kullanıcı listesi alınırken hata:', error);
+      Alert.alert('Hata', 'Kullanıcı listesi alınamadı');
+      setUsers([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -139,25 +133,29 @@ const UserManagement = ({ navigation }) => {
         style={styles.searchBar}
       />
 
-      <FlatList
-        data={users}
-        renderItem={renderUserItem}
-        keyExtractor={(item) => item.id.toString()}
-        refreshControl={
-          <RefreshControl 
-            refreshing={refreshing} 
-            onRefresh={onRefresh} 
-            colors={['#6200ee']} 
-          />
-        }
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>
-              {loading ? 'Yükleniyor...' : 'Kullanıcı bulunamadı'}
-            </Text>
-          </View>
-        }
-      />
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#6200ee" />
+        </View>
+      ) : (
+        <FlatList
+          data={users}
+          renderItem={renderUserItem}
+          keyExtractor={(item) => item?.id?.toString() || Math.random().toString()}
+          refreshControl={
+            <RefreshControl 
+              refreshing={refreshing} 
+              onRefresh={onRefresh} 
+              colors={['#6200ee']} 
+            />
+          }
+          ListEmptyComponent={() => (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>Kullanıcı bulunamadı</Text>
+            </View>
+          )}
+        />
+      )}
 
       <Portal>
         <Modal 
@@ -241,15 +239,20 @@ const styles = StyleSheet.create({
   roleAssignButton: {
     padding: 8,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 50,
+    padding: 20
   },
   emptyText: {
     fontSize: 16,
-    color: '#666',
+    color: '#666'
   },
   modalContainer: {
     backgroundColor: 'white',
