@@ -285,55 +285,20 @@ const HomeScreen = ({ navigation }) => {
         {/* Özel Gece Hatmi Kartı */}
         {specialNightHatim.isActive && (
           <Surface style={styles.specialNightCard}>
-            <View style={styles.specialNightCardHeader}>
-              <MaterialCommunityIcons name="star-circle" size={24} color="#FF6B6B" />
-              <Text style={styles.specialNightCardTitle}>Özel Gece Hatmi</Text>
-            </View>
-            <View style={styles.specialNightCardContent}>
-              <View style={styles.specialNightCardRow}>
-                <Text style={styles.specialNightCardLabel}>Etkinlik</Text>
-                <Text style={styles.specialNightCardValue}>{specialNightHatim.title}</Text>
-              </View>
-              <View style={styles.specialNightCardRow}>
-                <Text style={styles.specialNightCardLabel}>Zaman Aralığı</Text>
-                <Text style={styles.specialNightCardValue}>
-                  {specialNightHatim.startTime} - {specialNightHatim.endTime}
-                </Text>
-              </View>
-              <View style={styles.specialNightCardRow}>
-                <Text style={styles.specialNightCardLabel}>Durum</Text>
-                <Text style={styles.specialNightCardValue}>{specialNightHatim.status}</Text>
-              </View>
-              <View style={styles.specialNightCardProgressContainer}>
-                <Text style={styles.specialNightCardProgressLabel}>
-                  Kalan Süre: {formatTime(specialNightHatim.remainingTime)}
-                </Text>
-                <ProgressBar 
-                  progress={(3600 - specialNightHatim.remainingTime) / 3600} 
-                  color="#FF6B6B" 
-                  style={styles.specialNightCardProgressBar}
-                />
-              </View>
-              <View style={styles.specialNightCardFooter}>
-                <View style={styles.specialNightCardFooterItem}>
-                  <MaterialCommunityIcons name="account-group" size={16} color="#666" />
-                  <Text style={styles.specialNightCardFooterText}>
-                    {specialNightHatim.totalParticipants} Katılımcı
-                  </Text>
-                </View>
-                <View style={styles.specialNightCardFooterItem}>
-                  <MaterialCommunityIcons name="book-open-variant" size={16} color="#666" />
-                  <Text style={styles.specialNightCardFooterText}>
-                    {specialNightHatim.availableJuz} Cüz Müsait
-                  </Text>
-                </View>
-              </View>
+            <View style={styles.specialNightHeader}>
+              <MaterialCommunityIcons name="star" size={24} color="#6200ee" />
+              <Text style={styles.specialNightTitle}>
+                {specialNightHatim.title}
+              </Text>
+              <Text style={styles.specialNightTime}>
+                {formatTime(specialNightHatim.remainingTime)}
+              </Text>
             </View>
             <TouchableOpacity 
-              style={styles.specialNightCardButton}
+              style={styles.specialNightButton}
               onPress={handleSpecialNightParticipation}
             >
-              <Text style={styles.specialNightCardButtonText}>Katıl</Text>
+              <Text style={styles.specialNightButtonText}>Katıl</Text>
             </TouchableOpacity>
           </Surface>
         )}
@@ -514,68 +479,30 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: '#FFF3E0', // Hafif turuncu arka plan
   },
-  specialNightCardHeader: {
+  specialNightHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 12,
   },
-  specialNightCardTitle: {
+  specialNightTitle: {
     fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 8,
     color: '#FF6B6B',
   },
-  specialNightCardContent: {
-    marginBottom: 12,
-  },
-  specialNightCardRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  specialNightCardLabel: {
+  specialNightTime: {
     fontSize: 14,
     color: '#666',
+    marginLeft: 8,
   },
-  specialNightCardValue: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  specialNightCardProgressContainer: {
-    marginVertical: 8,
-  },
-  specialNightCardProgressLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
-  },
-  specialNightCardProgressBar: {
-    height: 8,
-    borderRadius: 4,
-  },
-  specialNightCardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 12,
-  },
-  specialNightCardFooterItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  specialNightCardFooterText: {
-    fontSize: 12,
-    color: '#666',
-    marginLeft: 4,
-  },
-  specialNightCardButton: {
+  specialNightButton: {
     backgroundColor: '#FF6B6B',
     borderRadius: 8,
     padding: 12,
     alignItems: 'center',
     marginTop: 12,
   },
-  specialNightCardButtonText: {
+  specialNightButtonText: {
     color: 'white',
     fontWeight: 'bold',
   },
