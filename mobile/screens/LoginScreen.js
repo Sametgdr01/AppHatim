@@ -1,6 +1,7 @@
 import React, { useState, useContext } from 'react';
-import { View, StyleSheet, Alert, ScrollView } from 'react-native';
-import { TextInput, Button, Title, Text } from 'react-native-paper';
+import { View, StyleSheet, Alert, ScrollView, Animated } from 'react-native';
+import { TextInput, Button, Title, Text, Banner, ActivityIndicator, Surface } from 'react-native-paper';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AuthContext } from '../context/AuthContext';
 
 const LoginScreen = ({ navigation }) => {
@@ -12,6 +13,8 @@ const LoginScreen = ({ navigation }) => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showSecurityBanner, setShowSecurityBanner] = useState(false);
+  const fadeAnim = React.useRef(new Animated.Value(0)).current;
   const { login, register } = useContext(AuthContext);
 
   // Telefon numarası formatını düzenleme
@@ -46,6 +49,24 @@ const LoginScreen = ({ navigation }) => {
     const trimmedLastName = lastName.trim();
     return `${trimmedFirstName} ${trimmedLastName}`.trim();
   };
+
+  // Güvenlik banner'ını göster/gizle
+  React.useEffect(() => {
+    if (isLoading) {
+      setShowSecurityBanner(true);
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 500,
+        useNativeDriver: true,
+      }).start(() => setShowSecurityBanner(false));
+    }
+  }, [isLoading]);
 
   const handleLoginOrRegister = async () => {
     setIsLoading(true);
@@ -110,10 +131,44 @@ const LoginScreen = ({ navigation }) => {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
+      {showSecurityBanner && (
+        <Animated.View style={[styles.bannerContainer, { opacity: fadeAnim }]}>
+          <Banner
+            visible={true}
+            icon={({size}) => (
+              <MaterialCommunityIcons
+                name="shield-lock"
+                size={30}
+                color="#6200ee"
+              />
+            )}
+            style={styles.banner}
+          >
+            <View>
+              <Text style={styles.bannerTitle}>Güvenli Bağlantı</Text>
+              <Text style={styles.bannerText}>
+                Bilgileriniz uçtan uca şifreleme ile korunmaktadır
+              </Text>
+            </View>
+          </Banner>
+        </Animated.View>
+      )}
+
+      {isLoading && (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#6200ee" />
+          <Text style={styles.loadingText}>Giriş yapılıyor...</Text>
+        </View>
+      )}
+
+      <Surface style={styles.formContainer} elevation={2}>
+        <Title style={styles.title}>
+          {step === 0 ? 'Giriş Yap' : 'Kayıt Ol'}
+        </Title>
+
       {step === 0 ? (
         // Giriş Ekranı
         <>
-          <Title>Giriş Yap</Title>
           <TextInput
             label="Telefon Numarası"
             value={phoneNumber}
@@ -153,7 +208,6 @@ const LoginScreen = ({ navigation }) => {
       ) : (
         // Kayıt Ekranı
         <>
-          <Title>Kayıt Ol</Title>
           <TextInput
             label="Ad"
             value={firstName}
@@ -227,6 +281,7 @@ const LoginScreen = ({ navigation }) => {
           </Text>
         </>
       )}
+      </Surface>
     </ScrollView>
   );
 };
@@ -234,8 +289,60 @@ const LoginScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    justifyContent: 'center',
+    backgroundColor: '#f5f5f5',
+    padding: 16,
+  },
+  bannerContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1000,
+  },
+  banner: {
+    backgroundColor: '#fff',
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 8,
+  },
+  bannerTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#6200ee',
+    marginBottom: 4,
+  },
+  bannerText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  loadingContainer: {
+    position: 'absolute',
+    top: '50%',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 1000,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
     padding: 20,
+    marginTop: -50,
+  },
+  loadingText: {
+    marginTop: 10,
+    color: '#6200ee',
+    fontSize: 16,
+  },
+  formContainer: {
+    padding: 20,
+    borderRadius: 8,
+    backgroundColor: '#fff',
+    marginTop: 20,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 20,
+    color: '#6200ee',
   },
   input: {
     marginBottom: 10,
