@@ -49,13 +49,23 @@ export const AuthProvider = ({ children }) => {
       try {
         const storedToken = await AsyncStorage.getItem('userToken');
         
-        if (storedToken) {
-          const response = await api.get('/auth/me');
+        if (!storedToken) {
+          setIsAuthenticated(false);
+          setUser(null);
+          return;
+        }
+
+        const response = await api.get('/auth/me');
+        if (response.data) {
           setUser(response.data);
           setIsAuthenticated(true);
+        } else {
+          throw new Error('Kullanıcı bilgileri alınamadı');
         }
       } catch (error) {
         console.error('Oturum kontrol hatası:', error);
+        setIsAuthenticated(false);
+        setUser(null);
         await AsyncStorage.removeItem('userToken');
       } finally {
         setIsLoading(false);
