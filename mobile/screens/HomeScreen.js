@@ -190,95 +190,6 @@ const HomeScreen = ({ navigation }) => {
           </View>
         </Surface>
 
-        {/* Hızlı Eylemler */}
-        <Surface style={styles.quickActionsCard}>
-          <View style={styles.quickActionsHeader}>
-            <MaterialCommunityIcons name="lightning-bolt" size={24} color="#6200ee" />
-            <Text style={styles.quickActionsTitle}>Hızlı Eylemler</Text>
-          </View>
-          <View style={styles.quickActionsContainer}>
-            <TouchableOpacity 
-              style={styles.quickActionButton}
-              onPress={() => navigation.navigate('MyJuzScreen')}
-            >
-              <MaterialCommunityIcons name="book-open-page-variant" size={24} color="#6200ee" />
-              <Text style={styles.quickActionText}>Hatimlerim</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={styles.quickActionButton}
-              onPress={() => navigation.navigate('GroupHatimsScreen')}
-            >
-              <MaterialCommunityIcons name="account-group" size={24} color="#6200ee" />
-              <Text style={styles.quickActionText}>Grup Hatimleri</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={styles.quickActionButton}
-              onPress={() => navigation.navigate('NotificationScreen')}
-            >
-              <MaterialCommunityIcons name="bell" size={24} color="#6200ee" />
-              <Text style={styles.quickActionText}>Bildirimler</Text>
-            </TouchableOpacity>
-          </View>
-        </Surface>
-
-        {/* Özel Gece Hatmi Kartı */}
-        {specialNightHatim.isActive && (
-          <Surface style={styles.specialNightCard}>
-            <View style={styles.specialNightCardHeader}>
-              <MaterialCommunityIcons name="star-circle" size={24} color="#FF6B6B" />
-              <Text style={styles.specialNightCardTitle}>Özel Gece Hatmi</Text>
-            </View>
-            <View style={styles.specialNightCardContent}>
-              <View style={styles.specialNightCardRow}>
-                <Text style={styles.specialNightCardLabel}>Etkinlik</Text>
-                <Text style={styles.specialNightCardValue}>{specialNightHatim.title}</Text>
-              </View>
-              <View style={styles.specialNightCardRow}>
-                <Text style={styles.specialNightCardLabel}>Zaman Aralığı</Text>
-                <Text style={styles.specialNightCardValue}>
-                  {specialNightHatim.startTime} - {specialNightHatim.endTime}
-                </Text>
-              </View>
-              <View style={styles.specialNightCardRow}>
-                <Text style={styles.specialNightCardLabel}>Durum</Text>
-                <Text style={styles.specialNightCardValue}>{specialNightHatim.status}</Text>
-              </View>
-              <View style={styles.specialNightCardProgressContainer}>
-                <Text style={styles.specialNightCardProgressLabel}>
-                  Kalan Süre: {formatTime(specialNightHatim.remainingTime)}
-                </Text>
-                <ProgressBar 
-                  progress={(3600 - specialNightHatim.remainingTime) / 3600} 
-                  color="#FF6B6B" 
-                  style={styles.specialNightCardProgressBar}
-                />
-              </View>
-              <View style={styles.specialNightCardFooter}>
-                <View style={styles.specialNightCardFooterItem}>
-                  <MaterialCommunityIcons name="account-group" size={16} color="#666" />
-                  <Text style={styles.specialNightCardFooterText}>
-                    {specialNightHatim.totalParticipants} Katılımcı
-                  </Text>
-                </View>
-                <View style={styles.specialNightCardFooterItem}>
-                  <MaterialCommunityIcons name="book-open-variant" size={16} color="#666" />
-                  <Text style={styles.specialNightCardFooterText}>
-                    {specialNightHatim.availableJuz} Cüz Müsait
-                  </Text>
-                </View>
-              </View>
-            </View>
-            <TouchableOpacity 
-              style={styles.specialNightCardButton}
-              onPress={handleSpecialNightParticipation}
-            >
-              <Text style={styles.specialNightCardButtonText}>Katıl</Text>
-            </TouchableOpacity>
-          </Surface>
-        )}
-
         {/* Kişisel Hatim Kartı */}
         <Surface style={styles.hatimCard}>
           <View style={styles.hatimCardHeader}>
@@ -370,6 +281,62 @@ const HomeScreen = ({ navigation }) => {
             <Text style={styles.hatimCardDetailButtonText}>Detayları Görüntüle</Text>
           </TouchableOpacity>
         </Surface>
+
+        {/* Özel Gece Hatmi Kartı */}
+        {specialNightHatim.isActive && (
+          <Surface style={styles.specialNightCard}>
+            <View style={styles.specialNightCardHeader}>
+              <MaterialCommunityIcons name="star-circle" size={24} color="#FF6B6B" />
+              <Text style={styles.specialNightCardTitle}>Özel Gece Hatmi</Text>
+            </View>
+            <View style={styles.specialNightCardContent}>
+              <View style={styles.specialNightCardRow}>
+                <Text style={styles.specialNightCardLabel}>Etkinlik</Text>
+                <Text style={styles.specialNightCardValue}>{specialNightHatim.title}</Text>
+              </View>
+              <View style={styles.specialNightCardRow}>
+                <Text style={styles.specialNightCardLabel}>Zaman Aralığı</Text>
+                <Text style={styles.specialNightCardValue}>
+                  {specialNightHatim.startTime} - {specialNightHatim.endTime}
+                </Text>
+              </View>
+              <View style={styles.specialNightCardRow}>
+                <Text style={styles.specialNightCardLabel}>Durum</Text>
+                <Text style={styles.specialNightCardValue}>{specialNightHatim.status}</Text>
+              </View>
+              <View style={styles.specialNightCardProgressContainer}>
+                <Text style={styles.specialNightCardProgressLabel}>
+                  Kalan Süre: {formatTime(specialNightHatim.remainingTime)}
+                </Text>
+                <ProgressBar 
+                  progress={(3600 - specialNightHatim.remainingTime) / 3600} 
+                  color="#FF6B6B" 
+                  style={styles.specialNightCardProgressBar}
+                />
+              </View>
+              <View style={styles.specialNightCardFooter}>
+                <View style={styles.specialNightCardFooterItem}>
+                  <MaterialCommunityIcons name="account-group" size={16} color="#666" />
+                  <Text style={styles.specialNightCardFooterText}>
+                    {specialNightHatim.totalParticipants} Katılımcı
+                  </Text>
+                </View>
+                <View style={styles.specialNightCardFooterItem}>
+                  <MaterialCommunityIcons name="book-open-variant" size={16} color="#666" />
+                  <Text style={styles.specialNightCardFooterText}>
+                    {specialNightHatim.availableJuz} Cüz Müsait
+                  </Text>
+                </View>
+              </View>
+            </View>
+            <TouchableOpacity 
+              style={styles.specialNightCardButton}
+              onPress={handleSpecialNightParticipation}
+            >
+              <Text style={styles.specialNightCardButtonText}>Katıl</Text>
+            </TouchableOpacity>
+          </Surface>
+        )}
       </ScrollView>
     </View>
   );
@@ -466,41 +433,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#6200ee',
     marginTop: 4,
-  },
-  quickActionsCard: {
-    marginHorizontal: 16,
-    marginBottom: 16,
-    borderRadius: 10,
-    elevation: 3,
-    padding: 16,
-  },
-  quickActionsHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  quickActionsTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 8,
-    color: '#6200ee',
-  },
-  quickActionsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  quickActionButton: {
-    alignItems: 'center',
-    flex: 1,
-    padding: 12,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 8,
-    marginHorizontal: 4,
-  },
-  quickActionText: {
-    marginTop: 8,
-    fontSize: 12,
-    color: '#6200ee',
   },
   hatimCard: {
     marginHorizontal: 16,
