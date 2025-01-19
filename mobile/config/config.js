@@ -30,52 +30,28 @@ export const OFFLINE_MODE_CONFIG = {
   }
 };
 
-// API Yapılandırması
-export const API_CONFIG = {
-  BASE_URL: 'https://apphatim.onrender.com/api',
-  TIMEOUT: 60000, // 60 saniye
-  RETRY_COUNT: 5,
-  RETRY_DELAY: 3000,
-  HEADERS: {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json'
-  }
-};
-
 // Sunucu ve Ağ Yapılandırması
 export const SERVER_CONFIG = {
-  // Ana sunucu adresleri
+  // Ana sunucu adresi
   PRIMARY_SERVERS: [
     {
-      URL: 'https://apphatim.onrender.com/api', // HTTPS kullanıyoruz
+      URL: 'https://apphatim.onrender.com/api',
       NAME: 'Production Server',
-      PRIORITY: 1,
-      TIMEOUT_MS: 5000,
-      RETRY_COUNT: 3
+      PRIORITY: 1
     }
   ],
 
   // Sunucu bağlantı parametreleri
   CONNECTION: {
-    TIMEOUT_MS: 5000,  // Global timeout
-    MAX_RETRIES: 3,    
-    RETRY_DELAY_MS: 2000, 
+    TIMEOUT_MS: 30000,     // 30 saniye timeout
+    MAX_RETRIES: 5,        // 5 kez deneme
+    RETRY_DELAY_MS: 5000,  // 5 saniye bekleme
     
     STRATEGY: {
       PREFER_CLOUD: true,
       FALLBACK_ON_FAILURE: true,
-      DYNAMIC_SERVER_SELECTION: true
+      DYNAMIC_SERVER_SELECTION: false
     }
-  },
-
-  // Offline mod desteği
-  OFFLINE_SUPPORT: {
-    ENABLED: true,
-    FALLBACK_STRATEGIES: [
-      'use_cached_data',
-      'show_offline_message',
-      'queue_operations'
-    ]
   },
 
   // Hata yönetimi
@@ -87,20 +63,79 @@ export const SERVER_CONFIG = {
   }
 };
 
-// Sunucu seçimi için gelişmiş fonksiyon
+// Sunucu seçimi için fonksiyon
 export const selectServerUrl = () => {
-  const manualServerUrl = 
-    process.env.MANUAL_SERVER_URL || 
-    process.env.REACT_NATIVE_SERVER_URL || 
-    SERVER_CONFIG.PRIMARY_SERVERS[0].URL;
-  
-  console.log('🌐 Seçilen Sunucu Adresi:', manualServerUrl);
-  
-  return manualServerUrl;
+  const serverUrl = SERVER_CONFIG.PRIMARY_SERVERS[0].URL;
+  console.log('🌐 Seçilen Sunucu Adresi:', serverUrl);
+  return serverUrl;
 };
 
 export const BASE_URL = selectServerUrl();
-export const API_TIMEOUT = 10000; // 10 saniye timeout
+
+// API yapılandırması
+export const API_CONFIG = {
+  // Temel API ayarları
+  BASE_URL: BASE_URL,
+  VERSION: 'v1',
+  TIMEOUT: SERVER_CONFIG.CONNECTION.TIMEOUT_MS,
+
+  // İstek başlıkları
+  HEADERS: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'X-Client-Version': '1.0.0',
+  },
+
+  // İstek limitleri
+  RATE_LIMIT: {
+    MAX_REQUESTS_PER_MINUTE: 60,
+    BURST_LIMIT: 10
+  },
+
+  // Yeniden deneme stratejisi
+  RETRY_STRATEGY: {
+    MAX_RETRIES: SERVER_CONFIG.CONNECTION.MAX_RETRIES,
+    BACKOFF_FACTOR: 2,
+    INITIAL_DELAY_MS: SERVER_CONFIG.CONNECTION.RETRY_DELAY_MS
+  }
+};
+
+// Ağ yapılandırması
+export const NETWORK_CONFIG = {
+  API_TIMEOUT: SERVER_CONFIG.CONNECTION.TIMEOUT_MS,
+  RETRY_COUNT: SERVER_CONFIG.CONNECTION.MAX_RETRIES,
+  RETRY_DELAY: SERVER_CONFIG.CONNECTION.RETRY_DELAY_MS,
+  
+  FALLBACK_SERVERS: SERVER_CONFIG.PRIMARY_SERVERS.map(server => server.URL),
+
+  // Bağlantı durumu kontrolleri
+  CONNECTION_CHECK: {
+    ENABLED: true,
+    INTERVAL_MS: 10000,
+    TIMEOUT_MS: 5000
+  }
+};
+
+// Hata yönetimi yapılandırması
+export const ERROR_HANDLING = {
+  NETWORK_ERROR_RETRY: SERVER_CONFIG.CONNECTION.STRATEGY.FALLBACK_ON_FAILURE,
+  MAX_NETWORK_RETRIES: SERVER_CONFIG.CONNECTION.MAX_RETRIES,
+  FALLBACK_ON_ERROR: SERVER_CONFIG.CONNECTION.STRATEGY.FALLBACK_ON_FAILURE,
+  
+  ALERT_TYPES: {
+    NETWORK_ERROR: 'Ağ Bağlantısı Hatası',
+    SERVER_ERROR: 'Sunucu Hatası',
+    TIMEOUT_ERROR: 'Zaman Aşımı Hatası',
+    AUTH_ERROR: 'Kimlik Doğrulama Hatası'
+  },
+  
+  ERROR_MESSAGES: {
+    NETWORK_ERROR: 'İnternet bağlantınızı kontrol edin',
+    SERVER_ERROR: 'Sunucu şu anda hizmet veremiyor',
+    TIMEOUT_ERROR: 'İstek zaman aşımına uğradı',
+    AUTH_ERROR: 'Oturum süreniz doldu'
+  }
+};
 
 // MongoDB Bağlantı Yapılandırması
 export const MONGO_CONNECTION = {
@@ -141,43 +176,5 @@ export const MOBILE_NETWORK_CONFIG = {
       TTL: 300000,
       MAX_CACHE_SIZE: 50
     }
-  }
-};
-
-export const NETWORK_CONFIG = {
-  API_TIMEOUT: SERVER_CONFIG.CONNECTION.TIMEOUT_MS,
-  RETRY_COUNT: SERVER_CONFIG.CONNECTION.MAX_RETRIES,
-  RETRY_DELAY: SERVER_CONFIG.CONNECTION.RETRY_DELAY_MS,
-  
-  FALLBACK_SERVERS: SERVER_CONFIG.PRIMARY_SERVERS.map(server => server.URL),
-
-  PING_SOURCES: [
-    'https://api.ipify.org?format=json',
-    'https://ip.seeip.org/jsonip',
-    'https://httpbin.org/ip'
-  ],
-  
-  PERFORMANCE_TRACKING: {
-    enabled: true,
-    logThresholdMS: 2000,
-    slowRequestAlert: true
-  },
-
-  OFFLINE_HANDLING: {
-    DETECT_OFFLINE: true,
-    RETRY_INTERVAL_MS: 5000,
-    MAX_OFFLINE_DURATION_MS: 30 * 60 * 1000 // 30 dakika
-  }
-};
-
-export const ERROR_HANDLING = {
-  NETWORK_ERROR_RETRY: SERVER_CONFIG.CONNECTION.STRATEGY.FALLBACK_ON_FAILURE,
-  MAX_NETWORK_RETRIES: SERVER_CONFIG.CONNECTION.MAX_RETRIES,
-  FALLBACK_ON_ERROR: SERVER_CONFIG.CONNECTION.STRATEGY.FALLBACK_ON_FAILURE,
-  
-  ALERT_TYPES: {
-    NETWORK_ERROR: 'Ağ Bağlantısı Hatası',
-    SERVER_ERROR: 'Sunucu Hatası',
-    TIMEOUT_ERROR: 'Zaman Aşımı Hatası'
   }
 };
