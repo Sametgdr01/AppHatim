@@ -4,7 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
-import { ActivityIndicator, View } from 'react-native';
+import LoadingScreen from '../components/LoadingScreen';
 
 // Import screens
 import AuthScreen from '../screens/AuthScreen';
@@ -89,16 +89,10 @@ const TabNavigator = () => {
   );
 };
 
-const LoadingScreen = () => (
-  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-    <ActivityIndicator size="large" color="#6200ee" />
-  </View>
-);
-
 const AppNavigator = () => {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, isConnecting } = useAuth();
 
-  if (isLoading) {
+  if (isLoading || isConnecting) {
     return <LoadingScreen />;
   }
 
