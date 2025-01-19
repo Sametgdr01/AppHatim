@@ -32,8 +32,8 @@ mongoose.connect(MONGO_URI)
       res.status(500).json({ error: 'Bir hata oluştu!', details: err.message });
     });
 
-    const PORT = process.env.PORT || 5000;
-    app.listen(PORT, () => {
+    const PORT = process.env.PORT || 10000;
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(`Server ${PORT} portunda çalışıyor`);
     });
   })
