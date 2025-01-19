@@ -3,6 +3,8 @@ import { View, StyleSheet, Alert, ScrollView, Animated } from 'react-native';
 import { TextInput, Button, Title, Text, Banner, ActivityIndicator, Surface } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AuthContext } from '../context/AuthContext';
+import apiService from '../services/apiService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const LoginScreen = ({ navigation }) => {
   const [step, setStep] = useState(0);
@@ -14,8 +16,9 @@ const LoginScreen = ({ navigation }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showSecurityBanner, setShowSecurityBanner] = useState(false);
+  const [error, setError] = useState(null);
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
-  const { login, register } = useContext(AuthContext);
+  const { login, register, signIn } = useContext(AuthContext);
 
   // Telefon numarası formatını düzenleme
   const formatPhoneNumber = (phone) => {
@@ -77,54 +80,53 @@ const LoginScreen = ({ navigation }) => {
     }
   }, [isLoading]);
 
+  // Giriş işlemi
   const handleLogin = async () => {
-    if (!phoneNumber) {
-      Alert.alert('Hata', 'Lütfen telefon numaranızı girin');
-      return;
-    }
-
-    setIsLoading(true);
-
     try {
+      setIsLoading(true);
+      setError(null);
+
+      // Telefon numarasını formatla
       const formattedPhone = formatPhoneNumber(phoneNumber);
-      console.log('📱 Giriş için kullanılan telefon numarası:', formattedPhone);
+      console.log('📱 Formatlanmış telefon:', formattedPhone);
 
-      // Login işlemi başlatılıyor
-      Alert.alert(
-        'Giriş Yapılıyor',
-        'Sunucuya bağlanılıyor, lütfen bekleyin...'
-      );
+      // Login isteği
+      try {
+        const response = await apiService.auth.login(formattedPhone);
+        console.log('✅ Login yanıtı:', response);
 
-      await login(formattedPhone);
-      
-      // TabNavigator'a yönlendirme
-      navigation.navigate('TabNavigator');
-    } catch (error) {
-      console.error('Login error details:', error);
-      
-      let errorMessage = 'Giriş yapılamadı. Lütfen tekrar deneyin.';
-      
-      if (error.message.includes('502')) {
-        errorMessage = 'Sunucu şu anda yoğun. Lütfen biraz bekleyip tekrar deneyin.';
-      } else if (error.message.includes('internet')) {
-        errorMessage = 'İnternet bağlantınızı kontrol edip tekrar deneyin.';
+        // Token'ı kaydet
+        await AsyncStorage.setItem('userToken', response.token);
+        
+        // Kullanıcı bilgilerini kaydet
+        await AsyncStorage.setItem('userData', JSON.stringify(response.user));
+
+        // AuthContext'i güncelle
+        signIn(response.token);
+      } catch (error) {
+        console.error('❌ Login hatası detayları:', {
+          message: error.message,
+          response: error.response?.data,
+          status: error.response?.status
+        });
+
+        // Hata mesajını belirle
+        let errorMessage = 'Giriş yapılırken bir hata oluştu';
+        
+        if (error.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.response?.status === 401) {
+          errorMessage = 'Telefon numarası veya şifre hatalı';
+        } else if (error.message === 'Network Error') {
+          errorMessage = 'Sunucuya bağlanılamıyor. Lütfen internet bağlantınızı kontrol edin.';
+        }
+
+        setError(errorMessage);
+        console.error('❌ Kullanıcı dostu hata:', errorMessage);
       }
-
-      Alert.alert(
-        'Giriş Başarısız',
-        errorMessage,
-        [
-          {
-            text: 'Tekrar Dene',
-            onPress: () => handleLogin(),
-            style: 'default',
-          },
-          {
-            text: 'İptal',
-            style: 'cancel',
-          },
-        ]
-      );
+    } catch (error) {
+      console.error('❌ Genel hata:', error);
+      setError('Beklenmeyen bir hata oluştu. Lütfen daha sonra tekrar deneyin.');
     } finally {
       setIsLoading(false);
     }
