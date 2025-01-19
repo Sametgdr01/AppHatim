@@ -12,7 +12,7 @@ const AuthContext = createContext({
   login: async () => {},
   register: async () => {},
   logout: async () => {},
-  updateProfile: async () => {},
+  updateUserProfile: async () => {},
   updateNotificationPreferences: async () => {}
 });
 
@@ -78,33 +78,37 @@ export const AuthProvider = ({ children }) => {
   // Giriş fonksiyonu
   const login = async (phoneNumber, password) => {
     try {
-      setIsLoading(true);
-      const response = await api.post('/auth/login', { phoneNumber, password });
-      
-      if (response.data.error) {
-        throw new Error(response.data.error);
-      }
+        setIsLoading(true);
+        const response = await api.post('/auth/login', { phoneNumber, password });
+        
+        if (response.data.error) {
+            Alert.alert('Hata', response.data.error); // Hata mesajını kullanıcıya göster
+            throw new Error(response.data.error);
+        }
 
-      const { token, user: userData } = response.data;
-      await AsyncStorage.setItem('userToken', token);
-      setUser(userData);
-      setIsAuthenticated(true);
-      
-      return userData;
+        const { token, user: userData } = response.data;
+        await AsyncStorage.setItem('userToken', token);
+        setUser(userData);
+        setIsAuthenticated(true);
+        
+        return userData;
     } catch (error) {
-      console.error('Giriş hatası:', error);
-      setIsAuthenticated(false);
-      setUser(null);
-      
-      if (error.response) {
-        throw new Error(error.response.data.error || 'Giriş başarısız');
-      } else if (error.request) {
-        throw new Error('Sunucuya bağlanılamadı');
-      } else {
-        throw new Error('Bir hata oluştu');
-      }
+        console.error('Giriş hatası:', error);
+        setIsAuthenticated(false);
+        setUser(null);
+        
+        if (error.response) {
+            Alert.alert('Hata', error.response.data.error || 'Giriş başarısız'); // Hata mesajını kullanıcıya göster
+            throw new Error(error.response.data.error || 'Giriş başarısız');
+        } else if (error.request) {
+            Alert.alert('Hata', 'Sunucuya istek gönderilemedi'); // Hata mesajını kullanıcıya göster
+            throw new Error('Sunucuya istek gönderilemedi');
+        } else {
+            Alert.alert('Hata', 'Giriş hatası: ' + error.message); // Hata mesajını kullanıcıya göster
+            throw new Error('Giriş hatası: ' + error.message);
+        }
     } finally {
-      setIsLoading(false);
+        setIsLoading(false);
     }
   };
 
@@ -151,23 +155,15 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Profil güncelleme
-  const updateProfile = async (profileData) => {
+  // Profil güncelleme fonksiyonu
+  const updateUserProfile = async (userData) => {
     try {
-      setIsLoading(true);
-      const response = await api.put('/users/profile', profileData);
-      setUser(response.data);
-      return response.data;
+      setUser(userData);
+      return true;
     } catch (error) {
-      if (error.response) {
-        throw new Error(error.response.data.message);
-      } else if (error.request) {
-        throw new Error('Sunucuya bağlanılamadı');
-      } else {
-        throw new Error('Bir hata oluştu');
-      }
-    } finally {
-      setIsLoading(false);
+      console.error('Profil güncelleme hatası:', error);
+      Alert.alert('Hata', 'Profil güncellenirken bir hata oluştu');
+      return false;
     }
   };
 
@@ -200,7 +196,7 @@ export const AuthProvider = ({ children }) => {
         login,
         register,
         logout,
-        updateProfile,
+        updateUserProfile,
         updateNotificationPreferences
       }}
     >

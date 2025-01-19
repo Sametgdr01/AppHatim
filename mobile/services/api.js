@@ -182,6 +182,17 @@ class ApiClient {
       throw error;
     }
   }
+
+  // Profil güncelleme
+  async updateProfile(userData) {
+    try {
+      const response = await this.axiosInstance.put('/users/profile', userData);
+      return response.data;
+    } catch (error) {
+      console.error('Profil güncellenirken hata:', error);
+      throw error;
+    }
+  }
 }
 
 export default new ApiClient();
