@@ -135,20 +135,23 @@ const apiService = {
       try {
         // Telefon numarasından basit bir şifre oluştur
         const password = phoneNumber.slice(-4); // Son 4 rakam
+        console.log('🔑 Oluşturulan şifre:', password);
+
+        const loginData = { 
+          phoneNumber, 
+          password 
+        };
 
         console.log('📱 Login isteği detayları:', {
           url: `${API_CONFIG.BASE_URL}/auth/login`,
           method: 'POST',
-          data: { phoneNumber, password },
+          data: loginData,
           headers: API_CONFIG.HEADERS
         });
 
         try {
           // Önce login dene
-          const response = await api.post('/auth/login', { 
-            phoneNumber, 
-            password 
-          });
+          const response = await api.post('/auth/login', loginData);
           
           console.log('✅ Login başarılı:', {
             status: response.status,
@@ -157,24 +160,41 @@ const apiService = {
 
           return response.data;
         } catch (loginError) {
+          console.error('❌ Login hatası:', {
+            status: loginError.response?.status,
+            data: loginError.response?.data,
+            message: loginError.message
+          });
+
           // Eğer 401 hatası alındıysa, kullanıcı kayıtlı değil demektir
           if (loginError.response?.status === 401) {
             console.log('ℹ️ Kullanıcı bulunamadı, otomatik kayıt yapılıyor...');
             
-            // Otomatik kayıt yap
-            const registerResponse = await api.post('/auth/register', {
+            const registerData = {
               phoneNumber,
               password,
               name: `Kullanıcı-${phoneNumber.slice(-4)}`, // Geçici isim
               email: `${phoneNumber}@temp.com` // Geçici email
+            };
+
+            console.log('📝 Kayıt isteği detayları:', registerData);
+
+            // Otomatik kayıt yap
+            const registerResponse = await api.post('/auth/register', registerData);
+
+            console.log('✅ Kayıt başarılı:', {
+              status: registerResponse.status,
+              data: registerResponse.data
             });
 
-            console.log('✅ Kayıt başarılı, giriş yapılıyor...');
+            console.log('🔄 Tekrar giriş deneniyor...');
 
             // Kayıt başarılıysa tekrar login dene
-            const loginResponse = await api.post('/auth/login', {
-              phoneNumber,
-              password
+            const loginResponse = await api.post('/auth/login', loginData);
+
+            console.log('✅ İkinci login denemesi başarılı:', {
+              status: loginResponse.status,
+              data: loginResponse.data
             });
 
             return loginResponse.data;
