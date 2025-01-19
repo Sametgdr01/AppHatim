@@ -32,7 +32,7 @@ export const OFFLINE_MODE_CONFIG = {
 
 // API Yapılandırması
 export const API_CONFIG = {
-  BASE_URL: 'http://apphatim.onrender.com/api',  // HTTP kullanıyoruz
+  BASE_URL: 'https://apphatim.onrender.com/api',  // HTTPS kullanıyoruz
   TIMEOUT: 30000, // 30 saniye
   RETRY_COUNT: 3,
   RETRY_DELAY: 2000,
@@ -47,7 +47,7 @@ export const SERVER_CONFIG = {
   // Ana sunucu adresleri
   PRIMARY_SERVERS: [
     {
-      URL: 'http://apphatim.onrender.com/api', // HTTP kullanıyoruz
+      URL: 'https://apphatim.onrender.com/api', // HTTPS kullanıyoruz
       NAME: 'Production Server',
       PRIORITY: 1,
       TIMEOUT_MS: 5000,
