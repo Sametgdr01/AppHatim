@@ -1,8 +1,7 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
-import { API_CONFIG, SERVER_CONFIG } from '../config/config';
-import https from 'https';
+import { API_CONFIG } from '../config/config';
 
 // API istemcisi oluşturma
 const api = axios.create({
@@ -10,13 +9,9 @@ const api = axios.create({
   timeout: API_CONFIG.TIMEOUT,
   headers: API_CONFIG.HEADERS,
   withCredentials: false,
-  httpsAgent: new https.Agent({
-    rejectUnauthorized: API_CONFIG.SSL.REJECT_UNAUTHORIZED
-  }),
-  proxy: API_CONFIG.PROXY.ENABLED ? {
-    host: API_CONFIG.PROXY.HOST,
-    port: API_CONFIG.PROXY.PORT
-  } : false,
+  validateStatus: function (status) {
+    return status >= 200 && status < 300; // Sadece 2xx yanıtları başarılı kabul et
+  },
   maxContentLength: 100 * 1024 * 1024, // 100MB
   maxBodyLength: 100 * 1024 * 1024, // 100MB
   decompress: true

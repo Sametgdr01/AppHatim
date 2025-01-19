@@ -99,19 +99,6 @@ export const API_CONFIG = {
     BACKOFF_FACTOR: 2,
     INITIAL_DELAY_MS: 1000,
     MAX_DELAY_MS: 10000
-  },
-
-  // HTTP proxy ayarları
-  PROXY: {
-    ENABLED: false,
-    HOST: null,
-    PORT: null
-  },
-
-  // SSL/TLS ayarları
-  SSL: {
-    REJECT_UNAUTHORIZED: false, // Self-signed sertifikaları kabul et
-    VERIFY_PEER: false
   }
 };
 
