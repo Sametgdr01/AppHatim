@@ -8,7 +8,7 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: '*', // Tüm originlere izin ver
+  origin: '*', 
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
@@ -36,9 +36,12 @@ mongoose.connect(MONGO_URI)
       res.status(500).json({ error: 'Bir hata oluştu!', details: err.message });
     });
 
-    const port = process.env.PORT || 3000;
-    app.listen(port, () => {
-      console.log(`Server ${port} portunda çalışıyor`);
+    // Render.com için port ayarı
+    const port = process.env.PORT || 10000;
+    const host = process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost';
+    
+    app.listen(port, host, () => {
+      console.log(`Server ${port} portunda çalışıyor (${host})`);
       console.log('Environment:', process.env.NODE_ENV);
       console.log('External URL:', process.env.RENDER_EXTERNAL_URL);
     });
