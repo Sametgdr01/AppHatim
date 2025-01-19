@@ -189,10 +189,13 @@ const LoginScreen = ({ navigation }) => {
         </Animated.View>
       )}
 
+      {/* Yükleme göstergesi */}
       {isLoading && (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#6200ee" />
-          <Text style={styles.loadingText}>Giriş yapılıyor...</Text>
+          <View style={styles.loadingContent}>
+            <ActivityIndicator size="large" color="#4CAF50" />
+            <Text style={styles.loadingText}>Güvenli Bağlantı Kuruluyor...</Text>
+          </View>
         </View>
       )}
 
@@ -376,16 +379,31 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
     zIndex: 1000,
+  },
+  loadingContent: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
   loadingText: {
     marginTop: 10,
-    color: '#6200ee',
     fontSize: 16,
-  }
+    color: '#333',
+    fontWeight: '500',
+  },
 });
 
 export default LoginScreen;
