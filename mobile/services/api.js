@@ -54,6 +54,9 @@ class ApiClient {
         throw new Error('İnternet bağlantısı yok');
       }
 
+      // Retry başlık bilgisini ekle
+      config.headers['x-retry-count'] = this.retryCount;
+
       // Platform bazlı optimizasyonlar
       if (Platform.OS === 'android' || Platform.OS === 'ios') {
         config.headers['X-Mobile-Platform'] = Platform.OS;
@@ -61,58 +64,55 @@ class ApiClient {
 
       return config;
     } catch (error) {
-      console.error('İstek Öncesi Hata:', error);
-      throw error;
+      return Promise.reject(error);
     }
   }
 
-  // İstek hatası
+  // İstek hata interceptoru
   requestErrorInterceptor(error) {
-    console.error('🚨 İstek Hatası:', error);
+    console.error('📡 İstek hatası:', error);
     return Promise.reject(error);
   }
 
-  // Yanıt başarılı
+  // Yanıt interceptoru
   responseInterceptor(response) {
-    this.retryCount = 0; // Başarılı yanıt alındığında retry sayacını sıfırla
+    // Başarılı yanıt durumunda retry sayacını sıfırla
+    this.retryCount = 0;
     return response;
   }
 
-  // Yanıt hatası
+  // Yanıt hata interceptoru
   async responseErrorInterceptor(error) {
-    console.error('🚨 Ağ Hatası:', error);
+    // Hata detaylarını logla
+    console.error('🔥 API Hatası:', {
+      status: error.response?.status,
+      url: error.config?.url,
+      method: error.config?.method,
+      retryCount: this.retryCount
+    });
 
-    // Timeout veya ağ hatası durumunda yeniden dene
-    if (
-      (error.code === 'ECONNABORTED' || !error.response) && 
-      this.retryCount < this.maxRetries
-    ) {
+    // 502 Bad Gateway hatası için yeniden deneme
+    if (error.response?.status === 502 && this.retryCount < this.maxRetries) {
       this.retryCount++;
-      console.log(`Yeniden deneme ${this.retryCount}/${this.maxRetries}`);
       
-      // Yeniden denemeden önce bekle
-      await new Promise(resolve => setTimeout(resolve, API_CONFIG.RETRY_DELAY));
+      // Exponential backoff ile bekleme süresi
+      const delay = Math.min(1000 * Math.pow(2, this.retryCount), 10000);
       
-      // İsteği yeniden dene
-      return this.axiosInstance.request(error.config);
+      console.log(`🔄 Yeniden deneme ${this.retryCount}/${this.maxRetries} (${delay}ms sonra)`);
+      
+      await new Promise(resolve => setTimeout(resolve, delay));
+      
+      return this.axiosInstance(error.config);
     }
 
-    // Hata mesajını hazırla
-    let errorMessage = 'Bir hata oluştu';
-    
-    if (error.response) {
-      // Sunucu yanıt verdi ama hata döndü
-      errorMessage = error.response.data?.message || error.response.data?.error || 'Sunucu hatası';
-    } else if (error.request) {
-      // Sunucuya istek gitti ama yanıt gelmedi
-      errorMessage = 'Sunucuya ulaşılamıyor. Lütfen internet bağlantınızı kontrol edin.';
-    } else {
-      // İstek oluşturulurken hata oluştu
-      errorMessage = error.message || 'Beklenmeyen bir hata oluştu';
+    // Maksimum deneme sayısına ulaşıldı
+    if (this.retryCount >= this.maxRetries) {
+      console.error('❌ Maksimum yeniden deneme sayısına ulaşıldı');
+      Alert.alert(
+        'Bağlantı Hatası',
+        'Sunucuya bağlanırken bir sorun oluştu. Lütfen daha sonra tekrar deneyin.'
+      );
     }
-
-    // Kullanıcıya hata mesajını göster
-    Alert.alert('Hata', errorMessage);
 
     return Promise.reject(error);
   }

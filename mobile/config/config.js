@@ -32,10 +32,10 @@ export const OFFLINE_MODE_CONFIG = {
 
 // API Yapılandırması
 export const API_CONFIG = {
-  BASE_URL: 'https://apphatim.onrender.com/api',  // HTTPS kullanıyoruz
-  TIMEOUT: 30000, // 30 saniye
-  RETRY_COUNT: 3,
-  RETRY_DELAY: 2000,
+  BASE_URL: 'https://apphatim.onrender.com/api',
+  TIMEOUT: 60000, // 60 saniye
+  RETRY_COUNT: 5,
+  RETRY_DELAY: 3000,
   HEADERS: {
     'Content-Type': 'application/json',
     'Accept': 'application/json'
