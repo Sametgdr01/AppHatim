@@ -6,7 +6,32 @@ const User = require('../models/User');
 // Kayıt ol
 router.post('/register', async (req, res) => {
   try {
+    console.log('Kayıt isteği alındı:', req.body);
     const { firstName, lastName, phoneNumber, email, password } = req.body;
+
+    // Validasyon
+    if (!firstName || !lastName || !phoneNumber || !email || !password) {
+      console.log('Eksik bilgi:', { firstName, lastName, phoneNumber, email, password: '***' });
+      return res.status(400).json({
+        error: 'Tüm alanları doldurun'
+      });
+    }
+
+    // Telefon numarası formatı
+    if (!/^0?5[0-9]{9}$/.test(phoneNumber)) {
+      console.log('Geçersiz telefon numarası:', phoneNumber);
+      return res.status(400).json({
+        error: 'Geçersiz telefon numarası formatı'
+      });
+    }
+
+    // Email formatı
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      console.log('Geçersiz email:', email);
+      return res.status(400).json({
+        error: 'Geçersiz e-posta formatı'
+      });
+    }
 
     // Kullanıcı var mı kontrol et
     const existingUser = await User.findOne({
@@ -14,6 +39,7 @@ router.post('/register', async (req, res) => {
     });
 
     if (existingUser) {
+      console.log('Kullanıcı zaten var:', { email, phoneNumber });
       return res.status(400).json({
         error: 'Bu e-posta veya telefon numarası zaten kayıtlı'
       });
@@ -29,6 +55,7 @@ router.post('/register', async (req, res) => {
     });
 
     await user.save();
+    console.log('Kullanıcı kaydedildi:', { id: user._id, email });
 
     // Token oluştur
     const token = jwt.sign(
@@ -36,6 +63,7 @@ router.post('/register', async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
+    console.log('Token oluşturuldu');
 
     res.status(201).json({
       message: 'Kullanıcı başarıyla kaydedildi',
@@ -49,8 +77,9 @@ router.post('/register', async (req, res) => {
     });
 
   } catch (error) {
+    console.error('Kayıt hatası:', error);
     res.status(500).json({
-      error: 'Kayıt sırasında bir hata oluştu',
+      error: 'Kayıt işlemi başarısız',
       details: error.message
     });
   }
@@ -64,8 +93,8 @@ router.post('/login', async (req, res) => {
     // Kullanıcıyı bul
     const user = await User.findOne({ phoneNumber });
     if (!user) {
-      return res.status(404).json({
-        error: 'Kullanıcı bulunamadı'
+      return res.status(401).json({
+        error: 'Telefon numarası veya şifre hatalı'
       });
     }
 
@@ -73,7 +102,7 @@ router.post('/login', async (req, res) => {
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
       return res.status(401).json({
-        error: 'Hatalı şifre'
+        error: 'Telefon numarası veya şifre hatalı'
       });
     }
 
@@ -85,6 +114,7 @@ router.post('/login', async (req, res) => {
     );
 
     res.json({
+      message: 'Giriş başarılı',
       token,
       user: {
         firstName: user.firstName,
@@ -95,8 +125,9 @@ router.post('/login', async (req, res) => {
     });
 
   } catch (error) {
+    console.error('Giriş hatası:', error);
     res.status(500).json({
-      error: 'Giriş sırasında bir hata oluştu',
+      error: 'Giriş işlemi başarısız',
       details: error.message
     });
   }

@@ -4,6 +4,9 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const authRoutes = require('./routes/auth');
 
+// JWT Secret key'i tanımla
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'apphatim-secret-key-2024';
+
 const app = express();
 
 // Middleware
@@ -44,6 +47,7 @@ mongoose.connect(MONGO_URI)
       console.log(`Server ${port} portunda çalışıyor (${host})`);
       console.log('Environment:', process.env.NODE_ENV);
       console.log('External URL:', process.env.RENDER_EXTERNAL_URL);
+      console.log('JWT Secret:', process.env.JWT_SECRET ? 'Ayarlandı' : 'Ayarlanmadı');
     });
   })
   .catch(err => {
