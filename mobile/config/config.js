@@ -32,10 +32,10 @@ export const OFFLINE_MODE_CONFIG = {
 
 // API Yapılandırması
 export const API_CONFIG = {
-  BASE_URL: 'https://apphatim.onrender.com/api',  // Render.com URL
-  TIMEOUT: 15000, // 15 saniye (ilk istek için daha uzun süre)
+  BASE_URL: 'https://apphatim.onrender.com:8080/api',  // Render.com URL
+  TIMEOUT: 30000, // 30 saniye (ilk istek için daha uzun süre)
   RETRY_COUNT: 3,
-  RETRY_DELAY: 1000,
+  RETRY_DELAY: 2000,
   HEADERS: {
     'Content-Type': 'application/json',
     'Accept': 'application/json'
@@ -47,7 +47,7 @@ export const SERVER_CONFIG = {
   // Ana sunucu adresleri
   PRIMARY_SERVERS: [
     {
-      URL: 'https://apphatim.onrender.com/api', // Render.com URL
+      URL: 'https://apphatim.onrender.com:8080/api', // Render.com URL
       NAME: 'Production Server',
       PRIORITY: 1,
       TIMEOUT_MS: 5000,
