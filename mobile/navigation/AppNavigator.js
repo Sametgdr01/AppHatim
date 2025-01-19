@@ -110,14 +110,16 @@ const AppNavigator = () => {
         }}
       >
         {!user ? (
+          // Auth Stack
           <>
             <Stack.Screen name="AppIntro" component={AppIntroScreen} />
             <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="Register" component={RegisterScreen} />
           </>
         ) : (
+          // App Stack
           <>
-            <Stack.Screen name="Main" component={TabNavigator} />
+            <Stack.Screen name="TabNavigator" component={TabNavigator} />
             <Stack.Screen name="JuzDetail" component={JuzDetail} />
             <Stack.Screen name="GroupDetail" component={GroupDetailScreen} />
             <Stack.Screen name="GroupAdmin" component={GroupAdminScreen} />

@@ -85,7 +85,10 @@ const LoginScreen = ({ navigation }) => {
 
           const userData = await login(formattedPhone, password);
           if (userData) {
-            navigation.navigate('Main');
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'TabNavigator' }]
+            });
           }
         } catch (error) {
           Alert.alert('Giriş Hatası', error.message || 'Giriş başarısız');
