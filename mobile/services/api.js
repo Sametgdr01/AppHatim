@@ -4,10 +4,8 @@ import NetInfo from '@react-native-community/netinfo';
 import { 
   BASE_URL, 
   API_TIMEOUT, 
-  SERVER_CONFIG, 
-  MONGO_CONNECTION 
+  SERVER_CONFIG
 } from '../config/config';
-import MongooseAdapter from './mongooseAdapter';
 import { Alert } from 'react-native';
 
 class ApiClient {
@@ -60,9 +58,6 @@ class ApiClient {
       if (!connectionState.isConnected) {
         throw new Error('İnternet bağlantısı yok');
       }
-
-      // MongoDB bağlantısını kontrol et
-      await MongooseAdapter.connect(MONGO_CONNECTION.uri);
 
       // Platform bazlı optimizasyonlar
       if (Platform.OS === 'android' || Platform.OS === 'ios') {

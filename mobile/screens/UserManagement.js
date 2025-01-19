@@ -27,7 +27,7 @@ const UserManagement = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUser, setSelectedUser] = useState(null);
   const [roleModalVisible, setRoleModalVisible] = useState(false);
-  const [selectedRole, setSelectedRole] = useState('user');
+  const [selectedRole, setSelectedRole] = useState('');
 
   const fetchUserList = useCallback(async () => {
     try {
@@ -139,7 +139,7 @@ const UserManagement = ({ navigation }) => {
         </View>
       ) : (
         <FlatList
-          data={users}
+          data={Array.isArray(users) ? users : []}
           renderItem={renderUserItem}
           keyExtractor={(item) => item?.id?.toString() || Math.random().toString()}
           refreshControl={
