@@ -7,7 +7,11 @@ const authRoutes = require('./routes/auth');
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: '*', // Tüm originlere izin ver
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 
 // MongoDB bağlantısı
@@ -32,9 +36,11 @@ mongoose.connect(MONGO_URI)
       res.status(500).json({ error: 'Bir hata oluştu!', details: err.message });
     });
 
-    const PORT = process.env.PORT || 10000;
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(`Server ${PORT} portunda çalışıyor`);
+    const port = process.env.PORT || 3000;
+    app.listen(port, () => {
+      console.log(`Server ${port} portunda çalışıyor`);
+      console.log('Environment:', process.env.NODE_ENV);
+      console.log('External URL:', process.env.RENDER_EXTERNAL_URL);
     });
   })
   .catch(err => {
