@@ -158,10 +158,10 @@ const HomeScreen = ({ navigation }) => {
             />
             <View style={styles.welcomeTextContainer}>
               <Text style={styles.welcomeText}>
-                Hoş Geldin, {user ? `${user.firstName} ${user.lastName}` : 'Misafir'}
+                Mübarek Hoşgeldin,
               </Text>
               <Text style={styles.subtitleText}>
-                Bugün hatmini tamamlamaya ne dersin?
+                Günlük Okumanı Yaptın mı?
               </Text>
             </View>
           </View>
@@ -199,31 +199,26 @@ const HomeScreen = ({ navigation }) => {
           <View style={styles.quickActionsContainer}>
             <TouchableOpacity 
               style={styles.quickActionButton}
-              onPress={() => navigation.navigate('ReadQuran')}
+              onPress={() => navigation.navigate('MyJuzScreen')}
             >
               <MaterialCommunityIcons name="book-open-page-variant" size={24} color="#6200ee" />
-              <Text style={styles.quickActionText}>Hatmi Oku</Text>
+              <Text style={styles.quickActionText}>Hatimlerim</Text>
             </TouchableOpacity>
+
             <TouchableOpacity 
               style={styles.quickActionButton}
-              onPress={() => navigation.navigate('JuzProgress')}
+              onPress={() => navigation.navigate('GroupHatimsScreen')}
             >
-              <MaterialCommunityIcons name="chart-line" size={24} color="#6200ee" />
-              <Text style={styles.quickActionText}>İlerleme</Text>
+              <MaterialCommunityIcons name="account-group" size={24} color="#6200ee" />
+              <Text style={styles.quickActionText}>Grup Hatimleri</Text>
             </TouchableOpacity>
+
             <TouchableOpacity 
               style={styles.quickActionButton}
-              onPress={() => navigation.navigate('InviteFriends')}
+              onPress={() => navigation.navigate('NotificationScreen')}
             >
-              <MaterialCommunityIcons name="account-plus" size={24} color="#6200ee" />
-              <Text style={styles.quickActionText}>Davet Et</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.quickActionButton}
-              onPress={handleSupport}
-            >
-              <MaterialCommunityIcons name="help-circle" size={24} color="#6200ee" />
-              <Text style={styles.quickActionText}>Destek</Text>
+              <MaterialCommunityIcons name="bell" size={24} color="#6200ee" />
+              <Text style={styles.quickActionText}>Bildirimler</Text>
             </TouchableOpacity>
           </View>
         </Surface>
