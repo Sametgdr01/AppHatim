@@ -19,22 +19,31 @@ const LoginScreen = ({ navigation }) => {
 
   // Telefon numarası formatını düzenleme
   const formatPhoneNumber = (phone) => {
-    // Tüm boşluk ve özel karakterleri kaldır
-    const cleanedPhone = phone.replace(/\D/g, '');
-    
-    // Telefon numarasını düzenle
-    const formattedPhone = cleanedPhone.startsWith('0') 
-      ? cleanedPhone 
-      : `0${cleanedPhone}`;
+    try {
+      // Tüm boşluk ve özel karakterleri kaldır
+      let cleanedPhone = phone.replace(/\D/g, '');
+      
+      // Başındaki 0'ı kaldır
+      if (cleanedPhone.startsWith('0')) {
+        cleanedPhone = cleanedPhone.substring(1);
+      }
 
-    // Telefon numarası formatını kontrol et (11 haneli)
-    const phoneRegex = /^0?5\d{9}$/;
-    if (!phoneRegex.test(formattedPhone)) {
+      // Telefon numarası 10 haneli olmalı (başında 0 olmadan)
+      if (cleanedPhone.length !== 10) {
+        throw new Error('Telefon numarası 10 haneli olmalıdır');
+      }
+
+      // 5 ile başlamalı
+      if (!cleanedPhone.startsWith('5')) {
+        throw new Error('Telefon numarası 5 ile başlamalıdır');
+      }
+
+      console.log('📱 Formatlanmış telefon:', cleanedPhone);
+      return cleanedPhone;
+    } catch (error) {
+      console.error('❌ Telefon format hatası:', error);
       throw new Error('Geçersiz telefon numarası formatı. Örnek: 5XXXXXXXXX');
     }
-
-    // Son 10 haneyi al (05 ile başlayacak şekilde)
-    return `05${formattedPhone.slice(-9)}`;
   };
 
   // E-posta formatını doğrulama
@@ -156,9 +165,9 @@ const LoginScreen = ({ navigation }) => {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView contentContainerStyle={styles.scrollContainer}>
       {showSecurityBanner && (
-        <Animated.View style={[styles.bannerContainer, { opacity: fadeAnim }]}>
+        <Animated.View style={[styles.securityBanner, { opacity: fadeAnim }]}>
           <Banner
             visible={true}
             icon={({size}) => (
@@ -168,11 +177,11 @@ const LoginScreen = ({ navigation }) => {
                 color="#6200ee"
               />
             )}
-            style={styles.banner}
+            style={styles.securityBanner}
           >
             <View>
-              <Text style={styles.bannerTitle}>Güvenli Bağlantı</Text>
-              <Text style={styles.bannerText}>
+              <Text style={styles.securityText}>Güvenli Bağlantı</Text>
+              <Text style={styles.securityText}>
                 Bilgileriniz uçtan uca şifreleme ile korunmaktadır
               </Text>
             </View>
@@ -187,7 +196,7 @@ const LoginScreen = ({ navigation }) => {
         </View>
       )}
 
-      <Surface style={styles.formContainer} elevation={2}>
+      <Surface style={styles.card} elevation={2}>
         <Title style={styles.title}>
           {step === 0 ? 'Giriş Yap' : 'Kayıt Ol'}
         </Title>
@@ -225,7 +234,7 @@ const LoginScreen = ({ navigation }) => {
             Giriş Yap
           </Button>
           <Text 
-            style={styles.registerText}
+            style={styles.linkText}
             onPress={() => setStep(1)}
           >
             Hesabınız yok mu? Kayıt Ol
@@ -300,7 +309,7 @@ const LoginScreen = ({ navigation }) => {
             Kayıt Ol
           </Button>
           <Text 
-            style={styles.registerText}
+            style={styles.linkText}
             onPress={() => setStep(0)}
           >
             Zaten hesabınız var mı? Giriş Yap
@@ -313,73 +322,69 @@ const LoginScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
+  scrollContainer: {
     flexGrow: 1,
+    justifyContent: 'center',
     backgroundColor: '#f5f5f5',
-    padding: 16,
+    paddingVertical: 20,
   },
-  bannerContainer: {
+  card: {
+    marginHorizontal: 16,
+    padding: 16,
+    borderRadius: 10,
+    backgroundColor: 'white',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 24,
+    textAlign: 'center',
+    color: '#6200ee',
+  },
+  input: {
+    marginBottom: 16,
+    backgroundColor: 'white',
+  },
+  button: {
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  linkText: {
+    color: '#6200ee',
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  securityBanner: {
+    marginHorizontal: 16,
+    marginBottom: 16,
+    backgroundColor: '#E8F5E9',
+  },
+  securityText: {
+    color: '#2E7D32',
+  },
+  loadingContainer: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    zIndex: 1000,
-  },
-  banner: {
-    backgroundColor: '#fff',
-    marginHorizontal: 16,
-    marginTop: 16,
-    borderRadius: 8,
-  },
-  bannerTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#6200ee',
-    marginBottom: 4,
-  },
-  bannerText: {
-    fontSize: 14,
-    color: '#666',
-  },
-  loadingContainer: {
-    position: 'absolute',
-    top: '50%',
-    left: 0,
-    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
     zIndex: 1000,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    padding: 20,
-    marginTop: -50,
   },
   loadingText: {
     marginTop: 10,
     color: '#6200ee',
     fontSize: 16,
-  },
-  formContainer: {
-    padding: 20,
-    borderRadius: 8,
-    backgroundColor: '#fff',
-    marginTop: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 20,
-    color: '#6200ee',
-  },
-  input: {
-    marginBottom: 10,
-  },
-  button: {
-    marginTop: 10,
-  },
-  registerText: {
-    textAlign: 'center',
-    marginTop: 15,
-    color: 'blue',
   }
 });
 
