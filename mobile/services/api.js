@@ -4,7 +4,8 @@ import NetInfo from '@react-native-community/netinfo';
 import { 
   BASE_URL, 
   API_TIMEOUT, 
-  SERVER_CONFIG
+  SERVER_CONFIG,
+  API_CONFIG
 } from '../config/config';
 import { Alert } from 'react-native';
 
@@ -12,6 +13,8 @@ class ApiClient {
   constructor() {
     this.axiosInstance = this.createAxiosInstance();
     this.setupInterceptors();
+    this.retryCount = 0;
+    this.maxRetries = API_CONFIG.RETRY_COUNT || 3;
   }
 
   // Platform bazlı Axios örneği oluştur
@@ -25,16 +28,7 @@ class ApiClient {
       }
     };
 
-    // Platform özelinde ek konfigürasyonlar
-    if (Platform.OS === 'web') {
-      return axios.create(baseConfig);
-    }
-
-    // Mobil platformlar için özel ayarlar
-    return axios.create({
-      ...baseConfig,
-      adapter: ['xhr', 'http', 'fetch']
-    });
+    return axios.create(baseConfig);
   }
 
   // İstek ve yanıt interceptorları
@@ -50,104 +44,77 @@ class ApiClient {
     );
   }
 
-  // İstek öncesi interceptor
+  // İstek öncesi işlemler
   async requestInterceptor(config) {
     try {
-      // Ağ durumu kontrolü
-      const connectionState = await NetInfo.fetch();
-      if (!connectionState.isConnected) {
+      // İnternet bağlantısını kontrol et
+      const netInfo = await NetInfo.fetch();
+      
+      if (!netInfo.isConnected) {
         throw new Error('İnternet bağlantısı yok');
       }
 
       // Platform bazlı optimizasyonlar
       if (Platform.OS === 'android' || Platform.OS === 'ios') {
         config.headers['X-Mobile-Platform'] = Platform.OS;
-        config.headers['X-Mobile-Version'] = Platform.Version;
       }
-
-      console.log('🚀 API İstek Detayları:', {
-        url: config.url,
-        method: config.method,
-        headers: config.headers
-      });
 
       return config;
     } catch (error) {
       console.error('İstek Öncesi Hata:', error);
-      this.handleNetworkError(error);
       throw error;
     }
   }
 
-  // İstek hatası interceptor
+  // İstek hatası
   requestErrorInterceptor(error) {
-    console.error('İstek Hatası:', error);
+    console.error('🚨 İstek Hatası:', error);
     return Promise.reject(error);
   }
 
-  // Yanıt interceptor
+  // Yanıt başarılı
   responseInterceptor(response) {
-    console.log('✅ API Yanıtı:', {
-      status: response.status,
-      data: response.data
-    });
+    this.retryCount = 0; // Başarılı yanıt alındığında retry sayacını sıfırla
     return response;
   }
 
-  // Yanıt hatası interceptor
+  // Yanıt hatası
   async responseErrorInterceptor(error) {
-    const originalRequest = error.config;
-
-    // Sunucu hatası durumunda yeniden deneme
-    if (error.response && error.response.status >= 500 && !originalRequest._retry) {
-      originalRequest._retry = true;
-
-      try {
-        const newBaseURL = await this.selectAlternativeServer();
-        originalRequest.baseURL = newBaseURL;
-
-        return this.axiosInstance(originalRequest);
-      } catch (retryError) {
-        this.handleNetworkError(retryError);
-        return Promise.reject(retryError);
-      }
-    }
-
-    this.handleNetworkError(error);
-    return Promise.reject(error);
-  }
-
-  // Alternatif sunucu seçimi
-  async selectAlternativeServer() {
-    const servers = SERVER_CONFIG.PRIMARY_SERVERS.map(s => s.URL);
-    
-    for (const serverUrl of servers) {
-      try {
-        const response = await axios.get(`${serverUrl}/health`);
-        if (response.status === 200) {
-          console.log('🌐 Yeni sunucu seçildi:', serverUrl);
-          return serverUrl;
-        }
-      } catch (error) {
-        console.warn(`Sunucu çalışmıyor: ${serverUrl}`, error);
-      }
-    }
-
-    throw new Error('Hiçbir sunucu kullanılabilir değil');
-  }
-
-  // Ağ hatası yönetimi
-  handleNetworkError(error) {
-    const errorMessage = error.message || 'Bilinmeyen ağ hatası';
-
-    if (SERVER_CONFIG.ERROR_HANDLING.NOTIFY_USER_ON_PERSISTENT_ERRORS) {
-      Alert.alert(
-        'Ağ Bağlantı Hatası',
-        `API isteği gönderilemedi: ${errorMessage}. Lütfen ağ ayarlarınızı kontrol edin.`
-      );
-    }
-
     console.error('🚨 Ağ Hatası:', error);
+
+    // Timeout veya ağ hatası durumunda yeniden dene
+    if (
+      (error.code === 'ECONNABORTED' || !error.response) && 
+      this.retryCount < this.maxRetries
+    ) {
+      this.retryCount++;
+      console.log(`Yeniden deneme ${this.retryCount}/${this.maxRetries}`);
+      
+      // Yeniden denemeden önce bekle
+      await new Promise(resolve => setTimeout(resolve, API_CONFIG.RETRY_DELAY));
+      
+      // İsteği yeniden dene
+      return this.axiosInstance.request(error.config);
+    }
+
+    // Hata mesajını hazırla
+    let errorMessage = 'Bir hata oluştu';
+    
+    if (error.response) {
+      // Sunucu yanıt verdi ama hata döndü
+      errorMessage = error.response.data?.message || error.response.data?.error || 'Sunucu hatası';
+    } else if (error.request) {
+      // Sunucuya istek gitti ama yanıt gelmedi
+      errorMessage = 'Sunucuya ulaşılamıyor. Lütfen internet bağlantınızı kontrol edin.';
+    } else {
+      // İstek oluşturulurken hata oluştu
+      errorMessage = error.message || 'Beklenmeyen bir hata oluştu';
+    }
+
+    // Kullanıcıya hata mesajını göster
+    Alert.alert('Hata', errorMessage);
+
+    return Promise.reject(error);
   }
 
   // HTTP metodları
@@ -155,11 +122,11 @@ class ApiClient {
     return this.axiosInstance.get(url, config);
   }
 
-  async post(url, data, config = {}) {
+  async post(url, data = {}, config = {}) {
     return this.axiosInstance.post(url, data, config);
   }
 
-  async put(url, data, config = {}) {
+  async put(url, data = {}, config = {}) {
     return this.axiosInstance.put(url, data, config);
   }
 
@@ -170,7 +137,7 @@ class ApiClient {
   // Kullanıcı listesini getir
   async fetchUsers({ search = '', includeDetails = false } = {}) {
     try {
-      const response = await this.axiosInstance.get('/users', {
+      const response = await this.get('/users', {
         params: {
           search,
           includeDetails
@@ -186,7 +153,7 @@ class ApiClient {
   // Profil güncelleme
   async updateProfile(userData) {
     try {
-      const response = await this.axiosInstance.put('/users/profile', userData);
+      const response = await this.put('/users/profile', userData);
       return response.data;
     } catch (error) {
       console.error('Profil güncellenirken hata:', error);
