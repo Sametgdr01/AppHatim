@@ -48,11 +48,18 @@ const RegisterScreen = ({ navigation }) => {
       await register(formData);
       Alert.alert(
         'Başarılı',
-        'Kaydınız başarıyla tamamlandı. Şimdi giriş yapabilirsiniz.',
-        [{ text: 'Tamam', onPress: () => navigation.navigate('Login') }]
+        'Kaydınız başarıyla tamamlandı.',
+        [
+          {
+            text: 'Tamam',
+            onPress: () => {
+              navigation.navigate('Login');
+            }
+          }
+        ]
       );
     } catch (error) {
-      Alert.alert('Hata', error.message || 'Kayıt işlemi başarısız oldu. Lütfen tekrar deneyin.');
+      Alert.alert('Hata', error.message || 'Kayıt işlemi başarısız oldu');
     } finally {
       setLoading(false);
     }

@@ -100,19 +100,15 @@ export const AuthProvider = ({ children }) => {
       setIsLoading(true);
       const response = await api.post('/auth/register', userData);
       
-      const { token, user: newUser } = response.data;
-      await AsyncStorage.setItem('userToken', token);
+      if (response.data.error) {
+        throw new Error(response.data.error);
+      }
       
-      setUser(newUser);
-      setIsAuthenticated(true);
-      
-      return newUser;
+      return response.data;
     } catch (error) {
-      setIsAuthenticated(false);
-      setUser(null);
-      
+      console.error('Kayıt hatası:', error);
       if (error.response) {
-        throw new Error(error.response.data.message);
+        throw new Error(error.response.data.error || 'Kayıt işlemi başarısız oldu');
       } else if (error.request) {
         throw new Error('Sunucuya bağlanılamadı');
       } else {
