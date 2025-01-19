@@ -1,170 +1,148 @@
 import axios from 'axios';
-import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
-import { 
-  BASE_URL, 
-  API_TIMEOUT, 
-  SERVER_CONFIG,
-  API_CONFIG
-} from '../config/config';
-import { Alert } from 'react-native';
+import { API_CONFIG, SERVER_CONFIG } from '../config/config';
 
-class ApiClient {
-  constructor() {
-    this.axiosInstance = this.createAxiosInstance();
-    this.setupInterceptors();
-    this.retryCount = 0;
-    this.maxRetries = API_CONFIG.RETRY_COUNT || 3;
-  }
+// API istemcisi oluşturma
+const api = axios.create({
+  baseURL: API_CONFIG.BASE_URL,
+  timeout: API_CONFIG.TIMEOUT,
+  headers: API_CONFIG.HEADERS
+});
 
-  // Platform bazlı Axios örneği oluştur
-  createAxiosInstance() {
-    const baseConfig = {
-      baseURL: BASE_URL,
-      timeout: API_TIMEOUT,
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      }
-    };
-
-    return axios.create(baseConfig);
-  }
-
-  // İstek ve yanıt interceptorları
-  setupInterceptors() {
-    this.axiosInstance.interceptors.request.use(
-      this.requestInterceptor.bind(this),
-      this.requestErrorInterceptor.bind(this)
-    );
-
-    this.axiosInstance.interceptors.response.use(
-      this.responseInterceptor.bind(this),
-      this.responseErrorInterceptor.bind(this)
-    );
-  }
-
-  // İstek öncesi işlemler
-  async requestInterceptor(config) {
-    try {
-      // İnternet bağlantısını kontrol et
-      const netInfo = await NetInfo.fetch();
-      
-      if (!netInfo.isConnected) {
-        throw new Error('İnternet bağlantısı yok');
-      }
-
-      // Retry başlık bilgisini ekle
-      config.headers['x-retry-count'] = this.retryCount;
-
-      // Platform bazlı optimizasyonlar
-      if (Platform.OS === 'android' || Platform.OS === 'ios') {
-        config.headers['X-Mobile-Platform'] = Platform.OS;
-      }
-
-      return config;
-    } catch (error) {
-      return Promise.reject(error);
+// İstek interceptor'ı
+api.interceptors.request.use(
+  async (config) => {
+    // İnternet bağlantısı kontrolü
+    const netInfo = await NetInfo.fetch();
+    if (!netInfo.isConnected) {
+      throw new Error('İnternet bağlantısı bulunamadı');
     }
-  }
 
-  // İstek hata interceptoru
-  requestErrorInterceptor(error) {
-    console.error('📡 İstek hatası:', error);
+    // Token kontrolü ve ekleme
+    const token = await AsyncStorage.getItem('userToken');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    console.log(`🚀 API İsteği: ${config.method.toUpperCase()} ${config.url}`);
+    return config;
+  },
+  (error) => {
+    console.error('❌ API İstek Hatası:', error);
     return Promise.reject(error);
   }
+);
 
-  // Yanıt interceptoru
-  responseInterceptor(response) {
-    // Başarılı yanıt durumunda retry sayacını sıfırla
-    this.retryCount = 0;
+// Yanıt interceptor'ı
+api.interceptors.response.use(
+  (response) => {
+    console.log(`✅ API Yanıtı: ${response.status} ${response.config.url}`);
     return response;
-  }
+  },
+  async (error) => {
+    console.error('❌ API Yanıt Hatası:', error);
 
-  // Yanıt hata interceptoru
-  async responseErrorInterceptor(error) {
-    // Hata detaylarını logla
-    console.error('🔥 API Hatası:', {
-      status: error.response?.status,
-      url: error.config?.url,
-      method: error.config?.method,
-      retryCount: this.retryCount
-    });
-
-    // 502 Bad Gateway hatası için yeniden deneme
-    if (error.response?.status === 502 && this.retryCount < this.maxRetries) {
-      this.retryCount++;
-      
-      // Exponential backoff ile bekleme süresi
-      const delay = Math.min(1000 * Math.pow(2, this.retryCount), 10000);
-      
-      console.log(`🔄 Yeniden deneme ${this.retryCount}/${this.maxRetries} (${delay}ms sonra)`);
-      
-      await new Promise(resolve => setTimeout(resolve, delay));
-      
-      return this.axiosInstance(error.config);
-    }
-
-    // Maksimum deneme sayısına ulaşıldı
-    if (this.retryCount >= this.maxRetries) {
-      console.error('❌ Maksimum yeniden deneme sayısına ulaşıldı');
-      Alert.alert(
-        'Bağlantı Hatası',
-        'Sunucuya bağlanırken bir sorun oluştu. Lütfen daha sonra tekrar deneyin.'
-      );
-    }
-
-    return Promise.reject(error);
-  }
-
-  // HTTP metodları
-  async get(url, config = {}) {
-    return this.axiosInstance.get(url, config);
-  }
-
-  async post(url, data = {}, config = {}) {
-    return this.axiosInstance.post(url, data, config);
-  }
-
-  async put(url, data = {}, config = {}) {
-    return this.axiosInstance.put(url, data, config);
-  }
-
-  async delete(url, config = {}) {
-    return this.axiosInstance.delete(url, config);
-  }
-
-  // Kullanıcı listesini getir
-  async fetchUsers({ search = '', includeDetails = false } = {}) {
-    try {
-      const response = await this.get('/users', {
-        params: {
-          search,
-          includeDetails
-        }
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Kullanıcı listesi alınamadı:', error);
-      throw error;
-    }
-  }
-
-  // Profil güncelleme
-  async updateProfile(userData) {
-    try {
-      const response = await this.put('/users/profile', userData);
-      
-      if (response.data.error) {
-        throw new Error(response.data.error);
+    // Özel hata mesajları
+    let errorMessage = 'Bir hata oluştu';
+    
+    if (error.message === 'Network Error') {
+      errorMessage = 'Sunucuya bağlanılamıyor. Lütfen internet bağlantınızı kontrol edin.';
+    } else if (error.response) {
+      switch (error.response.status) {
+        case 400:
+          errorMessage = 'Geçersiz istek. Lütfen bilgilerinizi kontrol edin.';
+          break;
+        case 401:
+          errorMessage = 'Oturum süreniz dolmuş. Lütfen tekrar giriş yapın.';
+          // Token'ı temizle
+          await AsyncStorage.removeItem('userToken');
+          break;
+        case 403:
+          errorMessage = 'Bu işlem için yetkiniz yok.';
+          break;
+        case 404:
+          errorMessage = 'İstenen kaynak bulunamadı.';
+          break;
+        case 500:
+          errorMessage = 'Sunucu hatası. Lütfen daha sonra tekrar deneyin.';
+          break;
+        case 502:
+          errorMessage = 'Sunucu şu anda meşgul. Lütfen biraz bekleyip tekrar deneyin.';
+          break;
+        default:
+          errorMessage = `Sunucu hatası: ${error.response.status}`;
       }
-      
-      return response.data;
-    } catch (error) {
-      console.error('Profil güncellenirken hata:', error);
-      throw error;
+    }
+
+    // Hata nesnesini özelleştir
+    const customError = new Error(errorMessage);
+    customError.originalError = error;
+    customError.response = error.response;
+    customError.status = error.response?.status;
+
+    return Promise.reject(customError);
+  }
+);
+
+// API fonksiyonları
+const apiService = {
+  // Kimlik doğrulama işlemleri
+  auth: {
+    async login(phoneNumber) {
+      try {
+        console.log('📱 Login isteği gönderiliyor:', phoneNumber);
+        const response = await api.post('/auth/login', { phoneNumber });
+        return response.data;
+      } catch (error) {
+        console.error('❌ Login hatası:', error);
+        throw error;
+      }
+    },
+
+    async register(userData) {
+      try {
+        const response = await api.post('/auth/register', userData);
+        return response.data;
+      } catch (error) {
+        console.error('❌ Kayıt hatası:', error);
+        throw error;
+      }
+    },
+
+    async logout() {
+      try {
+        await AsyncStorage.removeItem('userToken');
+        return true;
+      } catch (error) {
+        console.error('❌ Çıkış hatası:', error);
+        throw error;
+      }
+    }
+  },
+
+  // Kullanıcı işlemleri
+  user: {
+    async getProfile() {
+      try {
+        const response = await api.get('/user/profile');
+        return response.data;
+      } catch (error) {
+        console.error('❌ Profil getirme hatası:', error);
+        throw error;
+      }
+    },
+
+    async updateProfile(data) {
+      try {
+        const response = await api.put('/user/profile', data);
+        return response.data;
+      } catch (error) {
+        console.error('❌ Profil güncelleme hatası:', error);
+        throw error;
+      }
     }
   }
-}
+};
 
-export default new ApiClient();
+export default apiService;
