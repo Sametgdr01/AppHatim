@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Surface, Text, Title, Button, Portal, Modal, TextInput } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -9,6 +9,28 @@ const GroupHatimsScreen = ({ navigation }) => {
   const { userData } = useContext(AuthContext);
   const [showSpecialModal, setShowSpecialModal] = useState(false);
   const [specialHatimTitle, setSpecialHatimTitle] = useState('');
+  const [remainingTime, setRemainingTime] = useState(3600); // 1 saat = 3600 saniye
+
+  // Timer fonksiyonu
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setRemainingTime((prevTime) => {
+        if (prevTime <= 0) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prevTime - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  const formatTime = (seconds) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
 
   // Örnek grup hatim verileri
   const groupHatims = [
@@ -70,7 +92,7 @@ const GroupHatimsScreen = ({ navigation }) => {
                 <View style={styles.timeInfo}>
                   <MaterialCommunityIcons name="clock-outline" size={20} color="#fff" />
                   <Text style={styles.timeText}>
-                    {hatim.date} • {hatim.startTime} - {hatim.endTime}
+                    {formatTime(remainingTime)}
                   </Text>
                 </View>
 
@@ -79,13 +101,10 @@ const GroupHatimsScreen = ({ navigation }) => {
                     <View 
                       style={[
                         styles.progressFill, 
-                        { width: `${(hatim.completedPages / hatim.totalPages) * 100}%` }
+                        { width: `${((3600 - remainingTime) / 3600) * 100}%` }
                       ]} 
                     />
                   </View>
-                  <Text style={styles.progressText}>
-                    {hatim.completedPages}/{hatim.totalPages} Sayfa
-                  </Text>
                 </View>
 
                 <View style={styles.participantsList}>
