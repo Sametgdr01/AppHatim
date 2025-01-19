@@ -9,6 +9,7 @@ const AuthContext = createContext({
   isAuthenticated: false,
   user: null,
   isLoading: true,
+  isConnecting: true,
   login: async () => {},
   register: async () => {},
   logout: async () => {},
@@ -22,6 +23,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isConnecting, setIsConnecting] = useState(true);
 
   // API istemcisi
   const api = axios.create({
@@ -48,6 +50,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const checkAuthStatus = async () => {
       try {
+        setIsConnecting(true);
         const storedToken = await AsyncStorage.getItem('userToken');
         
         if (!storedToken) {
@@ -70,6 +73,7 @@ export const AuthProvider = ({ children }) => {
         await AsyncStorage.removeItem('userToken');
       } finally {
         setIsLoading(false);
+        setIsConnecting(false);
       }
     };
 
@@ -202,6 +206,7 @@ export const AuthProvider = ({ children }) => {
         isAuthenticated,
         user,
         isLoading,
+        isConnecting,
         login,
         register,
         logout,
