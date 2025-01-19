@@ -143,20 +143,48 @@ const apiService = {
           headers: API_CONFIG.HEADERS
         });
 
-        const response = await api.post('/auth/login', { 
-          phoneNumber, 
-          password 
-        });
-        
-        console.log('✅ Login yanıtı:', {
-          status: response.status,
-          data: response.data,
-          headers: response.headers
-        });
+        try {
+          // Önce login dene
+          const response = await api.post('/auth/login', { 
+            phoneNumber, 
+            password 
+          });
+          
+          console.log('✅ Login başarılı:', {
+            status: response.status,
+            data: response.data
+          });
 
-        return response.data;
+          return response.data;
+        } catch (loginError) {
+          // Eğer 401 hatası alındıysa, kullanıcı kayıtlı değil demektir
+          if (loginError.response?.status === 401) {
+            console.log('ℹ️ Kullanıcı bulunamadı, otomatik kayıt yapılıyor...');
+            
+            // Otomatik kayıt yap
+            const registerResponse = await api.post('/auth/register', {
+              phoneNumber,
+              password,
+              name: `Kullanıcı-${phoneNumber.slice(-4)}`, // Geçici isim
+              email: `${phoneNumber}@temp.com` // Geçici email
+            });
+
+            console.log('✅ Kayıt başarılı, giriş yapılıyor...');
+
+            // Kayıt başarılıysa tekrar login dene
+            const loginResponse = await api.post('/auth/login', {
+              phoneNumber,
+              password
+            });
+
+            return loginResponse.data;
+          }
+          
+          // Başka bir hata varsa tekrar fırlat
+          throw loginError;
+        }
       } catch (error) {
-        console.error('❌ Login hatası detayları:', {
+        console.error('❌ Login/Kayıt hatası detayları:', {
           message: error.message,
           status: error.response?.status,
           data: error.response?.data,
