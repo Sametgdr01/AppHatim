@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal } from 'react-native';
-import { Surface, Text, Title, Avatar, ProgressBar, WebView } from 'react-native-paper';
+import { Surface, Text, Title, Avatar, ProgressBar } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import NotificationService from '../services/NotificationService';
+import { WebView } from 'react-native-webview';
 import SupportModal from '../components/SupportModal';
 
 const HomeScreen = ({ navigation }) => {
