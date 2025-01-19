@@ -290,9 +290,16 @@ const HomeScreen = ({ navigation }) => {
               <Text style={styles.specialNightTitle}>
                 {specialNightHatim.title}
               </Text>
-              <Text style={styles.specialNightTime}>
+            </View>
+            <View style={styles.timerContainer}>
+              <Text style={styles.timerText}>
                 {formatTime(specialNightHatim.remainingTime)}
               </Text>
+              <ProgressBar
+                progress={(3600 - specialNightHatim.remainingTime) / 3600}
+                color="#6200ee"
+                style={styles.timerProgress}
+              />
             </View>
             <TouchableOpacity 
               style={styles.specialNightButton}
@@ -477,7 +484,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     elevation: 3,
     padding: 16,
-    backgroundColor: '#FFF3E0', // Hafif turuncu arka plan
+    backgroundColor: '#FFF3E0',
   },
   specialNightHeader: {
     flexDirection: 'row',
@@ -488,12 +495,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 8,
-    color: '#FF6B6B',
+    color: '#6200ee',
   },
-  specialNightTime: {
-    fontSize: 14,
-    color: '#666',
-    marginLeft: 8,
+  timerContainer: {
+    alignItems: 'center',
+    marginVertical: 8,
+  },
+  timerText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#6200ee',
+    marginBottom: 8,
+  },
+  timerProgress: {
+    height: 4,
+    width: '100%',
+    borderRadius: 2,
   },
   specialNightButton: {
     backgroundColor: '#FF6B6B',
