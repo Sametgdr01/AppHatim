@@ -44,6 +44,56 @@ api.interceptors.response.use(null, async (error) => {
   return api(config);
 });
 
+// Yanıt interceptor'ı
+api.interceptors.response.use(
+  (response) => {
+    console.log('✅ API Yanıtı:', {
+      url: response.config.url,
+      method: response.config.method,
+      status: response.status,
+      data: response.data
+    });
+    return response;
+  },
+  async (error) => {
+    // Detaylı hata loglaması
+    console.error('❌ API Hatası:', {
+      url: error.config?.url,
+      method: error.config?.method,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      message: error.message,
+      stack: error.stack
+    });
+
+    // Retry mekanizması
+    const { config } = error;
+    if (!config || !config.retry) {
+      return Promise.reject(error);
+    }
+
+    config.currentRetryCount = config.currentRetryCount || 0;
+
+    if (config.currentRetryCount >= API_CONFIG.RETRY_STRATEGY.MAX_RETRIES) {
+      return Promise.reject(error);
+    }
+
+    config.currentRetryCount += 1;
+
+    const delayMs = Math.min(
+      API_CONFIG.RETRY_STRATEGY.INITIAL_DELAY_MS * Math.pow(API_CONFIG.RETRY_STRATEGY.BACKOFF_FACTOR, config.currentRetryCount),
+      API_CONFIG.RETRY_STRATEGY.MAX_DELAY_MS
+    );
+
+    console.log(`🔄 Yeniden deneme ${config.currentRetryCount}/${API_CONFIG.RETRY_STRATEGY.MAX_RETRIES} (${delayMs}ms sonra)`);
+
+    await new Promise(resolve => setTimeout(resolve, delayMs));
+
+    return api(config);
+  }
+);
+
 // İstek interceptor'ı
 api.interceptors.request.use(
   async (config) => {
@@ -63,7 +113,9 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    console.log(`🚀 API İsteği: ${config.method.toUpperCase()} ${config.url}`, {
+    console.log('🚀 API İsteği:', {
+      url: config.url,
+      method: config.method?.toUpperCase(),
       headers: config.headers,
       data: config.data
     });
@@ -76,58 +128,7 @@ api.interceptors.request.use(
   }
 );
 
-// Yanıt interceptor'ı
-api.interceptors.response.use(
-  (response) => {
-    console.log(`✅ API Yanıtı: ${response.status} ${response.config.url}`);
-    return response;
-  },
-  async (error) => {
-    console.error('❌ API Yanıt Hatası:', error);
-
-    // Özel hata mesajları
-    let errorMessage = 'Bir hata oluştu';
-    
-    if (error.message === 'Network Error') {
-      errorMessage = 'Sunucuya bağlanılamıyor. Lütfen internet bağlantınızı kontrol edin.';
-    } else if (error.response) {
-      switch (error.response.status) {
-        case 400:
-          errorMessage = 'Geçersiz istek. Lütfen bilgilerinizi kontrol edin.';
-          break;
-        case 401:
-          errorMessage = 'Oturum süreniz dolmuş. Lütfen tekrar giriş yapın.';
-          // Token'ı temizle
-          await AsyncStorage.removeItem('userToken');
-          break;
-        case 403:
-          errorMessage = 'Bu işlem için yetkiniz yok.';
-          break;
-        case 404:
-          errorMessage = 'İstenen kaynak bulunamadı.';
-          break;
-        case 500:
-          errorMessage = 'Sunucu hatası. Lütfen daha sonra tekrar deneyin.';
-          break;
-        case 502:
-          errorMessage = 'Sunucu şu anda meşgul. Lütfen biraz bekleyip tekrar deneyin.';
-          break;
-        default:
-          errorMessage = `Sunucu hatası: ${error.response.status}`;
-      }
-    }
-
-    // Hata nesnesini özelleştir
-    const customError = new Error(errorMessage);
-    customError.originalError = error;
-    customError.response = error.response;
-    customError.status = error.response?.status;
-
-    return Promise.reject(customError);
-  }
-);
-
-// API fonksiyonları
+// API servisi
 const apiService = {
   // Kimlik doğrulama işlemleri
   auth: {
@@ -139,7 +140,13 @@ const apiService = {
 
         const loginData = { 
           phoneNumber, 
-          password 
+          password,
+          deviceInfo: {
+            platform: 'Unknown',
+            version: 'Unknown',
+            manufacturer: 'Unknown',
+            model: 'Unknown'
+          }
         };
 
         console.log('📱 Login isteği detayları:', {
@@ -174,7 +181,13 @@ const apiService = {
               phoneNumber,
               password,
               name: `Kullanıcı-${phoneNumber.slice(-4)}`, // Geçici isim
-              email: `${phoneNumber}@temp.com` // Geçici email
+              email: `${phoneNumber}@temp.com`, // Geçici email
+              deviceInfo: {
+                platform: 'Unknown',
+                version: 'Unknown',
+                manufacturer: 'Unknown',
+                model: 'Unknown'
+              }
             };
 
             console.log('📝 Kayıt isteği detayları:', registerData);
