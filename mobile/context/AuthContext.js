@@ -81,14 +81,18 @@ export const AuthProvider = ({ children }) => {
       setIsLoading(true);
       const response = await api.post('/auth/login', { phoneNumber, password });
       
+      if (response.data.error) {
+        throw new Error(response.data.error);
+      }
+
       const { token, user: userData } = response.data;
       await AsyncStorage.setItem('userToken', token);
-      
       setUser(userData);
       setIsAuthenticated(true);
       
       return userData;
     } catch (error) {
+      console.error('Giriş hatası:', error);
       setIsAuthenticated(false);
       setUser(null);
       

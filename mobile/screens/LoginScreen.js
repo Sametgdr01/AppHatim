@@ -62,11 +62,10 @@ const LoginScreen = ({ navigation }) => {
           const formattedPhone = formatPhoneNumber(phoneNumber);
           console.log('📱 Giriş için kullanılan telefon numarası:', formattedPhone);
 
-          await login(formattedPhone, password);
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'Main' }]
-          });
+          const userData = await login(formattedPhone, password);
+          if (userData) {
+            navigation.navigate('Main');
+          }
         } catch (error) {
           Alert.alert('Giriş Hatası', error.message || 'Giriş başarısız');
         }
