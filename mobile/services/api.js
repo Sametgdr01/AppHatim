@@ -91,14 +91,20 @@ const apiService = {
   auth: {
     async login(phoneNumber) {
       try {
+        // Telefon numarasından basit bir şifre oluştur
+        const password = phoneNumber.slice(-4); // Son 4 rakam
+
         console.log('📱 Login isteği detayları:', {
           url: `${API_CONFIG.BASE_URL}/auth/login`,
           method: 'POST',
-          data: { phoneNumber },
+          data: { phoneNumber, password },
           headers: API_CONFIG.HEADERS
         });
 
-        const response = await api.post('/auth/login', { phoneNumber });
+        const response = await api.post('/auth/login', { 
+          phoneNumber, 
+          password 
+        });
         
         console.log('✅ Login yanıtı:', {
           status: response.status,
