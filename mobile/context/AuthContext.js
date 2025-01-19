@@ -13,7 +13,8 @@ const AuthContext = createContext({
   register: async () => {},
   logout: async () => {},
   updateUserProfile: async () => {},
-  updateNotificationPreferences: async () => {}
+  updateNotificationPreferences: async () => {},
+  isAdmin: false
 });
 
 // AuthProvider bileşeni
@@ -78,37 +79,37 @@ export const AuthProvider = ({ children }) => {
   // Giriş fonksiyonu
   const login = async (phoneNumber, password) => {
     try {
-        setIsLoading(true);
-        const response = await api.post('/auth/login', { phoneNumber, password });
-        
-        if (response.data.error) {
-            Alert.alert('Hata', response.data.error); // Hata mesajını kullanıcıya göster
-            throw new Error(response.data.error);
-        }
+      setIsLoading(true);
+      const response = await api.post('/auth/login', { phoneNumber, password });
+      
+      if (response.data.error) {
+        Alert.alert('Hata', response.data.error); // Hata mesajını kullanıcıya göster
+        throw new Error(response.data.error);
+      }
 
-        const { token, user: userData } = response.data;
-        await AsyncStorage.setItem('userToken', token);
-        setUser(userData);
-        setIsAuthenticated(true);
-        
-        return userData;
+      const { token, user: userData } = response.data;
+      await AsyncStorage.setItem('userToken', token);
+      setUser(userData);
+      setIsAuthenticated(true);
+      
+      return userData;
     } catch (error) {
-        console.error('Giriş hatası:', error);
-        setIsAuthenticated(false);
-        setUser(null);
-        
-        if (error.response) {
-            Alert.alert('Hata', error.response.data.error || 'Giriş başarısız'); // Hata mesajını kullanıcıya göster
-            throw new Error(error.response.data.error || 'Giriş başarısız');
-        } else if (error.request) {
-            Alert.alert('Hata', 'Sunucuya istek gönderilemedi'); // Hata mesajını kullanıcıya göster
-            throw new Error('Sunucuya istek gönderilemedi');
-        } else {
-            Alert.alert('Hata', 'Giriş hatası: ' + error.message); // Hata mesajını kullanıcıya göster
-            throw new Error('Giriş hatası: ' + error.message);
-        }
+      console.error('Giriş hatası:', error);
+      setIsAuthenticated(false);
+      setUser(null);
+      
+      if (error.response) {
+        Alert.alert('Hata', error.response.data.error || 'Giriş başarısız'); // Hata mesajını kullanıcıya göster
+        throw new Error(error.response.data.error || 'Giriş başarısız');
+      } else if (error.request) {
+        Alert.alert('Hata', 'Sunucuya istek gönderilemedi'); // Hata mesajını kullanıcıya göster
+        throw new Error('Sunucuya istek gönderilemedi');
+      } else {
+        Alert.alert('Hata', 'Giriş hatası: ' + error.message); // Hata mesajını kullanıcıya göster
+        throw new Error('Giriş hatası: ' + error.message);
+      }
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -187,6 +188,14 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // isAdmin hesaplama
+  const checkIsAdmin = (userData) => {
+    return userData?.role === 'admin' || userData?.role === 'superadmin' || userData?.email === 'gudersamet@gmail.com';
+  };
+
+  // isAdmin değerini hesapla
+  const isAdmin = checkIsAdmin(user);
+
   return (
     <AuthContext.Provider
       value={{
@@ -197,7 +206,8 @@ export const AuthProvider = ({ children }) => {
         register,
         logout,
         updateUserProfile,
-        updateNotificationPreferences
+        updateNotificationPreferences,
+        isAdmin
       }}
     >
       {children}

@@ -31,7 +31,7 @@ const ProfileScreen = ({ navigation }) => {
   };
 
   // Super admin kontrolü
-  const isSuperAdmin = user && (user.email === 'gudersamet@gmail.com' || user.role === 'superadmin');
+  const isSuperAdmin = isAdmin && (user?.email === 'gudersamet@gmail.com' || user?.role === 'superadmin');
 
   if (!user) {
     return (
@@ -92,7 +92,7 @@ const ProfileScreen = ({ navigation }) => {
         </TouchableOpacity>
 
         {/* Super Admin için Özel Menüler */}
-        {(user.email === 'gudersamet@gmail.com' || user.role === 'superadmin') && (
+        {(isAdmin && (user?.email === 'gudersamet@gmail.com' || user?.role === 'superadmin')) && (
           <>
             <View style={styles.divider} />
             <Text style={styles.sectionSubtitle}>Yönetici İşlemleri</Text>
