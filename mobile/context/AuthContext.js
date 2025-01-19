@@ -82,23 +82,47 @@ export const AuthProvider = ({ children }) => {
 
   // Login işlemi
   const login = async (phoneNumber) => {
-    try {
-      const response = await api.post('/auth/login', { phoneNumber });
-      
-      if (response.data && response.data.token) {
-        await AsyncStorage.setItem('userToken', response.data.token);
-        api.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
+    let retryCount = 0;
+    const maxRetries = 3;
+    const baseDelay = 2000;
+
+    const attemptLogin = async () => {
+      try {
+        const response = await api.post('/auth/login', { phoneNumber });
         
-        setUser(response.data.user);
-        setIsAuthenticated(true);
-        return response.data;
-      } else {
-        throw new Error('Token alınamadı');
+        if (response.data && response.data.token) {
+          await AsyncStorage.setItem('userToken', response.data.token);
+          api.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
+          
+          setUser(response.data.user);
+          setIsAuthenticated(true);
+          return response.data;
+        } else {
+          throw new Error('Token alınamadı');
+        }
+      } catch (error) {
+        console.error('Login error:', error);
+        
+        // 502 hatası için yeniden deneme
+        if (error.response?.status === 502 && retryCount < maxRetries) {
+          retryCount++;
+          const delay = baseDelay * Math.pow(2, retryCount);
+          console.log(`🔄 Login yeniden deneniyor (${retryCount}/${maxRetries}) - ${delay}ms sonra`);
+          
+          await new Promise(resolve => setTimeout(resolve, delay));
+          return attemptLogin();
+        }
+
+        // Diğer hatalar veya maksimum deneme sayısına ulaşıldığında
+        if (error.response?.status === 502) {
+          throw new Error('Sunucu şu anda meşgul. Lütfen daha sonra tekrar deneyin.');
+        } else {
+          throw new Error(error.response?.data?.message || 'Giriş yapılamadı. Lütfen internet bağlantınızı kontrol edin.');
+        }
       }
-    } catch (error) {
-      console.error('Login error:', error);
-      throw new Error(error.response?.data?.message || 'Giriş yapılamadı');
-    }
+    };
+
+    return attemptLogin();
   };
 
   // Kayıt fonksiyonu

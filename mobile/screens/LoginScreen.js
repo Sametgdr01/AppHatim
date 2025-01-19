@@ -80,12 +80,42 @@ const LoginScreen = ({ navigation }) => {
       const formattedPhone = formatPhoneNumber(phoneNumber);
       console.log('📱 Giriş için kullanılan telefon numarası:', formattedPhone);
 
+      // Login işlemi başlatılıyor
+      Alert.alert(
+        'Giriş Yapılıyor',
+        'Sunucuya bağlanılıyor, lütfen bekleyin...'
+      );
+
       await login(formattedPhone);
       
       // TabNavigator'a yönlendirme
       navigation.navigate('TabNavigator');
     } catch (error) {
-      Alert.alert('Giriş Hatası', error.message || 'Giriş başarısız');
+      console.error('Login error details:', error);
+      
+      let errorMessage = 'Giriş yapılamadı. Lütfen tekrar deneyin.';
+      
+      if (error.message.includes('502')) {
+        errorMessage = 'Sunucu şu anda yoğun. Lütfen biraz bekleyip tekrar deneyin.';
+      } else if (error.message.includes('internet')) {
+        errorMessage = 'İnternet bağlantınızı kontrol edip tekrar deneyin.';
+      }
+
+      Alert.alert(
+        'Giriş Başarısız',
+        errorMessage,
+        [
+          {
+            text: 'Tekrar Dene',
+            onPress: () => handleLogin(),
+            style: 'default',
+          },
+          {
+            text: 'İptal',
+            style: 'cancel',
+          },
+        ]
+      );
     } finally {
       setIsLoading(false);
     }
