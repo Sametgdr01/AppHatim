@@ -80,40 +80,24 @@ export const AuthProvider = ({ children }) => {
     checkAuthStatus();
   }, []);
 
-  // Giriş fonksiyonu
-  const login = async (phoneNumber, password) => {
+  // Login işlemi
+  const login = async (phoneNumber) => {
     try {
-      setIsLoading(true);
-      const response = await api.post('/auth/login', { phoneNumber, password });
+      const response = await api.post('/auth/login', { phoneNumber });
       
-      if (response.data.error) {
-        Alert.alert('Hata', response.data.error); // Hata mesajını kullanıcıya göster
-        throw new Error(response.data.error);
-      }
-
-      const { token, user: userData } = response.data;
-      await AsyncStorage.setItem('userToken', token);
-      setUser(userData);
-      setIsAuthenticated(true);
-      
-      return userData;
-    } catch (error) {
-      console.error('Giriş hatası:', error);
-      setIsAuthenticated(false);
-      setUser(null);
-      
-      if (error.response) {
-        Alert.alert('Hata', error.response.data.error || 'Giriş başarısız'); // Hata mesajını kullanıcıya göster
-        throw new Error(error.response.data.error || 'Giriş başarısız');
-      } else if (error.request) {
-        Alert.alert('Hata', 'Sunucuya istek gönderilemedi'); // Hata mesajını kullanıcıya göster
-        throw new Error('Sunucuya istek gönderilemedi');
+      if (response.data && response.data.token) {
+        await AsyncStorage.setItem('userToken', response.data.token);
+        api.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
+        
+        setUser(response.data.user);
+        setIsAuthenticated(true);
+        return response.data;
       } else {
-        Alert.alert('Hata', 'Giriş hatası: ' + error.message); // Hata mesajını kullanıcıya göster
-        throw new Error('Giriş hatası: ' + error.message);
+        throw new Error('Token alınamadı');
       }
-    } finally {
-      setIsLoading(false);
+    } catch (error) {
+      console.error('Login error:', error);
+      throw new Error(error.response?.data?.message || 'Giriş yapılamadı');
     }
   };
 

@@ -68,67 +68,60 @@ const LoginScreen = ({ navigation }) => {
     }
   }, [isLoading]);
 
-  const handleLoginOrRegister = async () => {
+  const handleLogin = async () => {
+    if (!phoneNumber) {
+      Alert.alert('Hata', 'Lütfen telefon numaranızı girin');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      if (step === 0) {
-        // Giriş ekranı
-        if (!phoneNumber || !password) {
-          Alert.alert('Hata', 'Lütfen telefon numaranızı ve şifrenizi girin');
-          return;
-        }
+      const formattedPhone = formatPhoneNumber(phoneNumber);
+      console.log('📱 Giriş için kullanılan telefon numarası:', formattedPhone);
 
-        try {
-          const formattedPhone = formatPhoneNumber(phoneNumber);
-          console.log('📱 Giriş için kullanılan telefon numarası:', formattedPhone);
-
-          const userData = await login(formattedPhone, password);
-          if (userData) {
-            navigation.reset({
-              index: 0,
-              routes: [{ name: 'TabNavigator' }]
-            });
-          }
-        } catch (error) {
-          Alert.alert('Giriş Hatası', error.message || 'Giriş başarısız');
-        }
-      } else {
-        // Kayıt ekranı
-        if (firstName && lastName && phoneNumber && email && password && confirmPassword) {
-          if (!validateEmail(email)) {
-            Alert.alert('Hata', 'Lütfen geçerli bir e-posta adresi girin');
-            return;
-          }
-
-          if (password === confirmPassword) {
-            try {
-              const formattedPhone = formatPhoneNumber(phoneNumber);
-              
-              await register({
-                firstName,
-                lastName,
-                phoneNumber: formattedPhone,
-                email,
-                password
-              });
-
-              // Başarılı kayıt sonrası giriş ekranına dön
-              setStep(0);
-              Alert.alert('Başarılı', 'Kaydınız başarıyla tamamlandı. Lütfen giriş yapın.');
-              
-            } catch (error) {
-              Alert.alert('Kayıt Hatası', error.message || 'Kayıt işlemi başarısız');
-            }
-          } else {
-            Alert.alert('Hata', 'Şifreler eşleşmiyor');
-          }
-        } else {
-          Alert.alert('Hata', 'Lütfen tüm alanları doldurun');
-        }
-      }
+      await login(formattedPhone);
+      
+      // TabNavigator'a yönlendirme
+      navigation.navigate('TabNavigator');
+    } catch (error) {
+      Alert.alert('Giriş Hatası', error.message || 'Giriş başarısız');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleRegister = async () => {
+    if (firstName && lastName && phoneNumber && email && password && confirmPassword) {
+      if (!validateEmail(email)) {
+        Alert.alert('Hata', 'Lütfen geçerli bir e-posta adresi girin');
+        return;
+      }
+
+      if (password === confirmPassword) {
+        try {
+          const formattedPhone = formatPhoneNumber(phoneNumber);
+          
+          await register({
+            firstName,
+            lastName,
+            phoneNumber: formattedPhone,
+            email,
+            password
+          });
+
+          // Başarılı kayıt sonrası giriş ekranına dön
+          setStep(0);
+          Alert.alert('Başarılı', 'Kaydınız başarıyla tamamlandı. Lütfen giriş yapın.');
+          
+        } catch (error) {
+          Alert.alert('Kayıt Hatası', error.message || 'Kayıt işlemi başarısız');
+        }
+      } else {
+        Alert.alert('Hata', 'Şifreler eşleşmiyor');
+      }
+    } else {
+      Alert.alert('Hata', 'Lütfen tüm alanları doldurun');
     }
   };
 
@@ -194,7 +187,7 @@ const LoginScreen = ({ navigation }) => {
           />
           <Button 
             mode="contained"
-            onPress={handleLoginOrRegister}
+            onPress={handleLogin}
             style={styles.button}
             loading={isLoading}
             disabled={isLoading}
@@ -269,7 +262,7 @@ const LoginScreen = ({ navigation }) => {
           />
           <Button
             mode="contained"
-            onPress={handleLoginOrRegister}
+            onPress={handleRegister}
             style={styles.button}
             loading={isLoading}
             disabled={isLoading}
