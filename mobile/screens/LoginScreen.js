@@ -1,9 +1,9 @@
-import React, { useState, useContext } from 'react';
-import { View, StyleSheet, Alert, ScrollView, Animated } from 'react-native';
+import React, { useState, useContext, useEffect } from 'react';
+import { View, StyleSheet, Alert, Animated } from 'react-native';
 import { TextInput, Button, Title, Text, Banner, ActivityIndicator, Surface } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AuthContext } from '../context/AuthContext';
-import apiService from '../services/apiService';
+import { apiService } from '../services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const LoginScreen = ({ navigation }) => {
@@ -196,7 +196,7 @@ const LoginScreen = ({ navigation }) => {
         <View style={styles.loadingContainer}>
           <View style={styles.loadingContent}>
             <ActivityIndicator size="large" color="#4CAF50" />
-            <Text style={styles.loadingText}>Güvenli Bağlantı Kuruluyor...</Text>
+            <Text style={styles.loadingText}>Güvenli Bağlantıyı Kuruluyor...</Text>
           </View>
         </View>
       )}

@@ -129,7 +129,7 @@ api.interceptors.request.use(
 );
 
 // API servisi
-const apiService = {
+export const apiService = {
   // Kimlik doğrulama işlemleri
   auth: {
     async login(phoneNumber) {
@@ -327,5 +327,3 @@ const apiService = {
     }
   }
 };
-
-export default apiService;
