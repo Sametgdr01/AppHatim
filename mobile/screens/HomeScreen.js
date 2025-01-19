@@ -136,7 +136,9 @@ const HomeScreen = ({ navigation }) => {
       >
         {/* Üst Bar - Anasayfa ve Destek Ol */}
         <Surface style={styles.topBar}>
-          <Text style={styles.pageTitle}>Anasayfa</Text>
+          <Text style={styles.pageTitle}>
+            {user ? `${user.firstName} ${user.lastName}` : 'Anasayfa'}
+          </Text>
           <TouchableOpacity 
             style={styles.supportButton}
             onPress={handleSupport}
@@ -156,7 +158,7 @@ const HomeScreen = ({ navigation }) => {
             />
             <View style={styles.welcomeTextContainer}>
               <Text style={styles.welcomeText}>
-                Hoş Geldin, {user ? user.fullName || user.name : 'Misafir'}
+                Hoş Geldin, {user ? `${user.firstName} ${user.lastName}` : 'Misafir'}
               </Text>
               <Text style={styles.subtitleText}>
                 Bugün hatmini tamamlamaya ne dersin?
