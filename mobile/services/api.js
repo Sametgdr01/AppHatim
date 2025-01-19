@@ -91,21 +91,58 @@ const apiService = {
   auth: {
     async login(phoneNumber) {
       try {
-        console.log('📱 Login isteği gönderiliyor:', phoneNumber);
+        console.log('📱 Login isteği detayları:', {
+          url: `${API_CONFIG.BASE_URL}/auth/login`,
+          method: 'POST',
+          data: { phoneNumber },
+          headers: API_CONFIG.HEADERS
+        });
+
         const response = await api.post('/auth/login', { phoneNumber });
+        
+        console.log('✅ Login yanıtı:', {
+          status: response.status,
+          data: response.data,
+          headers: response.headers
+        });
+
         return response.data;
       } catch (error) {
-        console.error('❌ Login hatası:', error);
+        console.error('❌ Login hatası detayları:', {
+          message: error.message,
+          status: error.response?.status,
+          data: error.response?.data,
+          config: error.config
+        });
         throw error;
       }
     },
 
     async register(userData) {
       try {
+        console.log('📝 Kayıt isteği detayları:', {
+          url: `${API_CONFIG.BASE_URL}/auth/register`,
+          method: 'POST',
+          data: userData,
+          headers: API_CONFIG.HEADERS
+        });
+
         const response = await api.post('/auth/register', userData);
+        
+        console.log('✅ Kayıt yanıtı:', {
+          status: response.status,
+          data: response.data,
+          headers: response.headers
+        });
+
         return response.data;
       } catch (error) {
-        console.error('❌ Kayıt hatası:', error);
+        console.error('❌ Kayıt hatası detayları:', {
+          message: error.message,
+          status: error.response?.status,
+          data: error.response?.data,
+          config: error.config
+        });
         throw error;
       }
     },
@@ -125,20 +162,57 @@ const apiService = {
   user: {
     async getProfile() {
       try {
+        console.log('👥 Profil isteği detayları:', {
+          url: `${API_CONFIG.BASE_URL}/user/profile`,
+          method: 'GET',
+          headers: API_CONFIG.HEADERS
+        });
+
         const response = await api.get('/user/profile');
+        
+        console.log('✅ Profil yanıtı:', {
+          status: response.status,
+          data: response.data,
+          headers: response.headers
+        });
+
         return response.data;
       } catch (error) {
-        console.error('❌ Profil getirme hatası:', error);
+        console.error('❌ Profil getirme hatası detayları:', {
+          message: error.message,
+          status: error.response?.status,
+          data: error.response?.data,
+          config: error.config
+        });
         throw error;
       }
     },
 
     async updateProfile(data) {
       try {
+        console.log('📝 Profil güncelleme isteği detayları:', {
+          url: `${API_CONFIG.BASE_URL}/user/profile`,
+          method: 'PUT',
+          data: data,
+          headers: API_CONFIG.HEADERS
+        });
+
         const response = await api.put('/user/profile', data);
+        
+        console.log('✅ Profil güncelleme yanıtı:', {
+          status: response.status,
+          data: response.data,
+          headers: response.headers
+        });
+
         return response.data;
       } catch (error) {
-        console.error('❌ Profil güncelleme hatası:', error);
+        console.error('❌ Profil güncelleme hatası detayları:', {
+          message: error.message,
+          status: error.response?.status,
+          data: error.response?.data,
+          config: error.config
+        });
         throw error;
       }
     }
