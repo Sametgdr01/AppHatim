@@ -1,126 +1,147 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  View, 
-  Text, 
-  FlatList, 
-  TouchableOpacity, 
-  StyleSheet, 
-  RefreshControl, 
-  Alert,
-  ActivityIndicator
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  StyleSheet,
+  FlatList,
+  RefreshControl,
+  Alert
 } from 'react-native';
-import { 
-  Avatar, 
-  Surface, 
-  Modal, 
-  Portal, 
-  RadioButton, 
-  Searchbar 
+import {
+  Surface,
+  Text,
+  Searchbar,
+  ActivityIndicator,
+  List,
+  IconButton,
+  Button
 } from 'react-native-paper';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import api from '../services/api';
 
-const UserManagement = ({ navigation }) => {
+const UserManagement = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [roleModalVisible, setRoleModalVisible] = useState(false);
-  const [selectedRole, setSelectedRole] = useState('');
+  const [error, setError] = useState(null);
 
-  const fetchUserList = useCallback(async () => {
+  // Kullanıcıları getir
+  const fetchUsers = async (search = '') => {
     try {
-      setLoading(true);
-      const fetchedUsers = await api.fetchUsers({
-        search: searchQuery,
-        includeDetails: true
-      });
-
-      if (Array.isArray(fetchedUsers)) {
-        // gudersamet@gmail.com kullanıcısını her zaman listenin başına koy
-        const sametUserIndex = fetchedUsers.findIndex(user => user.email === 'gudersamet@gmail.com');
-        if (sametUserIndex !== -1) {
-          const sametUser = fetchedUsers.splice(sametUserIndex, 1)[0];
-          fetchedUsers.unshift({
-            ...sametUser,
-            role: 'superadmin' // Her zaman super admin olarak göster
-          });
-        }
-
-        setUsers(fetchedUsers);
+      setError(null);
+      const data = await api.fetchUsers({ search });
+      
+      if (Array.isArray(data)) {
+        setUsers(data);
       } else {
-        console.error('Kullanıcı listesi dizi değil:', fetchedUsers);
-        Alert.alert('Hata', 'Kullanıcı listesi alınamadı');
-        setUsers([]);
+        throw new Error('Kullanıcı listesi alınamadı');
       }
-    } catch (error) {
-      console.error('Kullanıcı listesi alınırken hata:', error);
-      Alert.alert('Hata', 'Kullanıcı listesi alınamadı');
-      setUsers([]);
+    } catch (err) {
+      console.error('Kullanıcıları getirme hatası:', err);
+      setError('Kullanıcılar yüklenirken bir hata oluştu');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
+  };
+
+  // İlk yükleme
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  // Arama değiştiğinde
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      fetchUsers(searchQuery);
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
   }, [searchQuery]);
 
-  useEffect(() => {
-    fetchUserList();
-  }, [fetchUserList]);
-
-  const onRefresh = () => {
+  // Yenileme işlemi
+  const onRefresh = React.useCallback(() => {
     setRefreshing(true);
-    fetchUserList();
-  };
+    fetchUsers(searchQuery);
+  }, [searchQuery]);
 
-  const handleAssignRole = async () => {
-    if (!selectedUser) return;
-
-    // Samet Güder için özel kontrol
-    if (selectedUser.email === 'gudersamet@gmail.com') {
-      Alert.alert(
-        'İzin Hatası', 
-        'Bu kullanıcının rolü değiştirilemez. Samet Güder her zaman Super Admin olarak kalacaktır.'
-      );
-      return;
-    }
-
+  // Kullanıcı rolünü güncelle
+  const handleRoleUpdate = async (userId, newRole) => {
     try {
-      await api.assignUserRole(selectedUser.id, selectedRole);
-      Alert.alert('Başarılı', `${selectedUser.name} kullanıcısına ${selectedRole} rolü atandı.`);
-      setRoleModalVisible(false);
-      fetchUserList(); // Listeyi güncelle
+      await api.put(`/users/${userId}/role`, { role: newRole });
+      Alert.alert('Başarılı', 'Kullanıcı rolü güncellendi');
+      fetchUsers(searchQuery); // Listeyi yenile
     } catch (error) {
-      Alert.alert('Hata', 'Rol ataması yapılamadı.');
+      console.error('Rol güncelleme hatası:', error);
+      Alert.alert('Hata', 'Rol güncellenirken bir hata oluştu');
     }
   };
 
-  const openRoleModal = (user) => {
-    setSelectedUser(user);
-    setSelectedRole(user.role || 'user');
-    setRoleModalVisible(true);
+  // Kullanıcıyı sil
+  const handleDeleteUser = async (userId) => {
+    Alert.alert(
+      'Kullanıcıyı Sil',
+      'Bu kullanıcıyı silmek istediğinize emin misiniz?',
+      [
+        { text: 'İptal', style: 'cancel' },
+        {
+          text: 'Sil',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await api.delete(`/users/${userId}`);
+              Alert.alert('Başarılı', 'Kullanıcı silindi');
+              fetchUsers(searchQuery); // Listeyi yenile
+            } catch (error) {
+              console.error('Kullanıcı silme hatası:', error);
+              Alert.alert('Hata', 'Kullanıcı silinirken bir hata oluştu');
+            }
+          },
+        },
+      ]
+    );
   };
 
+  // Rol değiştirme menüsü
+  const showRoleMenu = (user) => {
+    Alert.alert(
+      'Rol Değiştir',
+      `${user.firstName} ${user.lastName} için yeni rol seçin`,
+      [
+        { text: 'İptal', style: 'cancel' },
+        {
+          text: 'Kullanıcı',
+          onPress: () => handleRoleUpdate(user._id, 'user'),
+        },
+        {
+          text: 'Admin',
+          onPress: () => handleRoleUpdate(user._id, 'admin'),
+        },
+      ]
+    );
+  };
+
+  // Kullanıcı kartı
   const renderUserItem = ({ item }) => (
     <Surface style={styles.userCard}>
-      <View style={styles.userCardContent}>
-        <Avatar.Image 
-          source={{ uri: item.profileImage || 'https://via.placeholder.com/150' }} 
-          size={50} 
-        />
-        <View style={styles.userInfo}>
-          <Text style={styles.userName}>{item.name}</Text>
-          <Text style={styles.userRole}>
-            Mevcut Rol: {item.role || 'Kullanıcı'}
-          </Text>
-        </View>
-        <TouchableOpacity 
-          style={styles.roleAssignButton}
-          onPress={() => openRoleModal(item)}
-        >
-          <MaterialCommunityIcons name="account-edit" size={24} color="#6200ee" />
-        </TouchableOpacity>
-      </View>
+      <List.Item
+        title={`${item.firstName} ${item.lastName}`}
+        description={`${item.email}\nRol: ${item.role || 'Kullanıcı'}`}
+        left={props => (
+          <List.Icon {...props} icon="account" />
+        )}
+        right={props => (
+          <View style={styles.actionButtons}>
+            <IconButton
+              icon="account-convert"
+              onPress={() => showRoleMenu(item)}
+            />
+            <IconButton
+              icon="delete"
+              onPress={() => handleDeleteUser(item._id)}
+            />
+          </View>
+        )}
+      />
     </Surface>
   );
 
@@ -134,73 +155,29 @@ const UserManagement = ({ navigation }) => {
       />
 
       {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#6200ee" />
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" />
+        </View>
+      ) : error ? (
+        <View style={styles.centerContainer}>
+          <Text>{error}</Text>
+          <Button onPress={() => fetchUsers(searchQuery)}>Tekrar Dene</Button>
+        </View>
+      ) : users.length === 0 ? (
+        <View style={styles.centerContainer}>
+          <Text>Kullanıcı bulunamadı</Text>
         </View>
       ) : (
         <FlatList
-          data={Array.isArray(users) ? users : []}
+          data={users}
           renderItem={renderUserItem}
-          keyExtractor={(item) => item?.id?.toString() || Math.random().toString()}
+          keyExtractor={item => item._id}
+          contentContainerStyle={styles.listContainer}
           refreshControl={
-            <RefreshControl 
-              refreshing={refreshing} 
-              onRefresh={onRefresh} 
-              colors={['#6200ee']} 
-            />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
-          ListEmptyComponent={() => (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>Kullanıcı bulunamadı</Text>
-            </View>
-          )}
         />
       )}
-
-      <Portal>
-        <Modal 
-          visible={roleModalVisible} 
-          onDismiss={() => setRoleModalVisible(false)}
-          contentContainerStyle={styles.modalContainer}
-        >
-          <Text style={styles.modalTitle}>Rol Ata: {selectedUser?.name}</Text>
-          
-          <RadioButton.Group 
-            onValueChange={newValue => setSelectedRole(newValue)} 
-            value={selectedRole}
-          >
-            <View style={styles.radioGroup}>
-              <View style={styles.radioItem}>
-                <RadioButton value="user" />
-                <Text>Kullanıcı</Text>
-              </View>
-              <View style={styles.radioItem}>
-                <RadioButton value="admin" />
-                <Text>Admin</Text>
-              </View>
-              <View style={styles.radioItem}>
-                <RadioButton value="superadmin" />
-                <Text>Super Admin</Text>
-              </View>
-            </View>
-          </RadioButton.Group>
-
-          <View style={styles.modalButtons}>
-            <TouchableOpacity 
-              style={styles.modalCancelButton}
-              onPress={() => setRoleModalVisible(false)}
-            >
-              <Text style={styles.modalCancelButtonText}>İptal</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.modalConfirmButton}
-              onPress={handleAssignRole}
-            >
-              <Text style={styles.modalConfirmButtonText}>Rol Ata</Text>
-            </TouchableOpacity>
-          </View>
-        </Modal>
-      </Portal>
     </View>
   );
 };
@@ -212,98 +189,24 @@ const styles = StyleSheet.create({
   },
   searchBar: {
     margin: 16,
+    elevation: 4,
   },
-  userCard: {
-    marginHorizontal: 16,
-    marginBottom: 12,
-    borderRadius: 12,
-    elevation: 2,
-  },
-  userCardContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  listContainer: {
     padding: 16,
   },
-  userInfo: {
-    marginLeft: 16,
-    flex: 1,
+  userCard: {
+    marginBottom: 8,
+    elevation: 2,
+    borderRadius: 8,
   },
-  userName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  userRole: {
-    fontSize: 14,
-    color: '#666',
-  },
-  roleAssignButton: {
-    padding: 8,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-  emptyContainer: {
+  centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20
   },
-  emptyText: {
-    fontSize: 16,
-    color: '#666'
-  },
-  modalContainer: {
-    backgroundColor: 'white',
-    padding: 20,
-    margin: 20,
-    borderRadius: 12,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  radioGroup: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginVertical: 16,
-  },
-  radioItem: {
+  actionButtons: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 16,
-  },
-  modalCancelButton: {
-    flex: 1,
-    padding: 12,
-    alignItems: 'center',
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: '#6200ee',
-    borderRadius: 8,
-  },
-  modalCancelButtonText: {
-    color: '#6200ee',
-    fontWeight: 'bold',
-  },
-  modalConfirmButton: {
-    flex: 1,
-    padding: 12,
-    alignItems: 'center',
-    backgroundColor: '#6200ee',
-    borderRadius: 8,
-    marginLeft: 8,
-  },
-  modalConfirmButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
   },
 });
 

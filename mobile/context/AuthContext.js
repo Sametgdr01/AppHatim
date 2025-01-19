@@ -126,21 +126,24 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Çıkış fonksiyonu
+  // Çıkış işlemi
   const logout = async () => {
     try {
-      setIsLoading(true);
+      // Token'ı sil
       await AsyncStorage.removeItem('userToken');
       
+      // API header'dan token'ı kaldır
+      delete api.defaults.headers.common['Authorization'];
+      
+      // State'i temizle
       setUser(null);
       setIsAuthenticated(false);
+      setIsAdmin(false);
+      
+      return true;
     } catch (error) {
-      Alert.alert(
-        'Çıkış Hatası', 
-        'Çıkış işlemi tamamlanamadı'
-      );
-    } finally {
-      setIsLoading(false);
+      console.error('Çıkış hatası:', error);
+      throw new Error('Çıkış yapılırken bir hata oluştu');
     }
   };
 

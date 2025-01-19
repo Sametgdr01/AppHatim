@@ -154,6 +154,11 @@ class ApiClient {
   async updateProfile(userData) {
     try {
       const response = await this.put('/users/profile', userData);
+      
+      if (response.data.error) {
+        throw new Error(response.data.error);
+      }
+      
       return response.data;
     } catch (error) {
       console.error('Profil güncellenirken hata:', error);
