@@ -2,17 +2,60 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 import { API_CONFIG, SERVER_CONFIG } from '../config/config';
+import https from 'https';
 
 // API istemcisi oluşturma
 const api = axios.create({
   baseURL: API_CONFIG.BASE_URL,
   timeout: API_CONFIG.TIMEOUT,
-  headers: API_CONFIG.HEADERS
+  headers: API_CONFIG.HEADERS,
+  withCredentials: false,
+  httpsAgent: new https.Agent({
+    rejectUnauthorized: API_CONFIG.SSL.REJECT_UNAUTHORIZED
+  }),
+  proxy: API_CONFIG.PROXY.ENABLED ? {
+    host: API_CONFIG.PROXY.HOST,
+    port: API_CONFIG.PROXY.PORT
+  } : false,
+  maxContentLength: 100 * 1024 * 1024, // 100MB
+  maxBodyLength: 100 * 1024 * 1024, // 100MB
+  decompress: true
+});
+
+// Retry mekanizması
+api.interceptors.response.use(null, async (error) => {
+  const { config } = error;
+  if (!config || !config.retry) {
+    return Promise.reject(error);
+  }
+
+  config.currentRetryCount = config.currentRetryCount || 0;
+
+  if (config.currentRetryCount >= API_CONFIG.RETRY_STRATEGY.MAX_RETRIES) {
+    return Promise.reject(error);
+  }
+
+  config.currentRetryCount += 1;
+
+  const delayMs = Math.min(
+    API_CONFIG.RETRY_STRATEGY.INITIAL_DELAY_MS * Math.pow(API_CONFIG.RETRY_STRATEGY.BACKOFF_FACTOR, config.currentRetryCount),
+    API_CONFIG.RETRY_STRATEGY.MAX_DELAY_MS
+  );
+
+  console.log(`🔄 Yeniden deneme ${config.currentRetryCount}/${API_CONFIG.RETRY_STRATEGY.MAX_RETRIES} (${delayMs}ms sonra)`);
+
+  await new Promise(resolve => setTimeout(resolve, delayMs));
+
+  return api(config);
 });
 
 // İstek interceptor'ı
 api.interceptors.request.use(
   async (config) => {
+    // Her isteğe retry özelliği ekle
+    config.retry = true;
+    config.currentRetryCount = 0;
+
     // İnternet bağlantısı kontrolü
     const netInfo = await NetInfo.fetch();
     if (!netInfo.isConnected) {
@@ -25,7 +68,11 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    console.log(`🚀 API İsteği: ${config.method.toUpperCase()} ${config.url}`);
+    console.log(`🚀 API İsteği: ${config.method.toUpperCase()} ${config.url}`, {
+      headers: config.headers,
+      data: config.data
+    });
+
     return config;
   },
   (error) => {

@@ -77,13 +77,14 @@ export const API_CONFIG = {
   // Temel API ayarları
   BASE_URL: BASE_URL,
   VERSION: 'v1',
-  TIMEOUT: SERVER_CONFIG.CONNECTION.TIMEOUT_MS,
+  TIMEOUT: 60000, // 60 saniye
 
   // İstek başlıkları
   HEADERS: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
     'X-Client-Version': '1.0.0',
+    'Connection': 'keep-alive'
   },
 
   // İstek limitleri
@@ -94,9 +95,23 @@ export const API_CONFIG = {
 
   // Yeniden deneme stratejisi
   RETRY_STRATEGY: {
-    MAX_RETRIES: SERVER_CONFIG.CONNECTION.MAX_RETRIES,
+    MAX_RETRIES: 3,
     BACKOFF_FACTOR: 2,
-    INITIAL_DELAY_MS: SERVER_CONFIG.CONNECTION.RETRY_DELAY_MS
+    INITIAL_DELAY_MS: 1000,
+    MAX_DELAY_MS: 10000
+  },
+
+  // HTTP proxy ayarları
+  PROXY: {
+    ENABLED: false,
+    HOST: null,
+    PORT: null
+  },
+
+  // SSL/TLS ayarları
+  SSL: {
+    REJECT_UNAUTHORIZED: false, // Self-signed sertifikaları kabul et
+    VERIFY_PEER: false
   }
 };
 
