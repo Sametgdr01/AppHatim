@@ -377,152 +377,20 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// Şifre sıfırlama kodu gönder
+// Şifremi unuttum
 router.post('/forgot-password', async (req, res) => {
-  try {
-    console.log(' Şifre sıfırlama kodu gönderme isteği:', req.body);
-    const { email } = req.body;
-
-    if (!email) {
-      console.log(' Eksik bilgi:', { email: !!email });
-      return res.status(400).json({ 
-        message: 'Email adresi gerekli',
-        details: {
-          email: !email ? 'Email adresi gerekli' : null
-        }
-      });
-    }
-
-    // Email validasyonu
-    const validation = validateEmail(email);
-    if (!validation.isValid) {
-      console.log(' Email geçersiz:', validation.message);
-      return res.status(400).json({ 
-        message: validation.message,
-        details: {
-          email: validation.message
-        }
-      });
-    }
-
-    // Kullanıcıyı bul
-    const user = await User.findOne({ email });
-    console.log(' Kullanıcı arama sonucu:', { found: !!user });
-
-    if (!user) {
-      return res.status(404).json({ 
-        message: 'Bu email adresiyle kayıtlı kullanıcı bulunamadı',
-        details: {
-          email: 'Bu email adresiyle kayıtlı kullanıcı bulunamadı'
-        }
-      });
-    }
-
-    // Sıfırlama kodu oluştur (6 haneli)
-    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
-    
-    // Kodun geçerlilik süresini ayarla (15 dakika)
-    const resetCodeExpiry = new Date();
-    resetCodeExpiry.setMinutes(resetCodeExpiry.getMinutes() + 15);
-
-    // Kullanıcıya kodu kaydet
-    user.resetCode = resetCode;
-    user.resetCodeExpiry = resetCodeExpiry;
-    await user.save();
-
-    // Email gönder
-    console.log(' Sıfırlama kodu:', resetCode);
-    try {
-      await sendPasswordResetEmail(email, resetCode, user.firstName);
-      console.log('✅ Sıfırlama kodu e-postası gönderildi');
-    } catch (emailError) {
-      console.error('❌ E-posta gönderme hatası:', emailError);
-      // E-posta gönderilemese bile işleme devam et
-    }
-
-    res.json({ 
-      message: 'Şifre sıfırlama kodu email adresinize gönderildi',
-      // DEV ortamında kodu göster
-      ...(process.env.NODE_ENV === 'development' && { resetCode })
-    });
-
-  } catch (error) {
-    console.error(' Şifre sıfırlama kodu gönderme hatası:', error);
-    res.status(500).json({ 
-      message: 'Şifre sıfırlama kodu gönderilirken bir hata oluştu',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
-  }
+  res.status(503).json({ 
+    message: 'Şifremi unuttum özelliği geçici olarak devre dışıdır. Lütfen daha sonra tekrar deneyiniz.',
+    status: 'maintenance'
+  });
 });
 
-// Şifre sıfırla
+// Şifre sıfırlama
 router.post('/reset-password', async (req, res) => {
-  try {
-    console.log(' Şifre sıfırlama isteği:', req.body);
-    const { email, resetCode, newPassword } = req.body;
-
-    if (!email || !resetCode || !newPassword) {
-      console.log(' Eksik bilgi:', { email: !!email, resetCode: !!resetCode, newPassword: !!newPassword });
-      return res.status(400).json({ 
-        message: 'Email, kod ve yeni şifre gerekli',
-        details: {
-          email: !email ? 'Email gerekli' : null,
-          resetCode: !resetCode ? 'Kod gerekli' : null,
-          newPassword: !newPassword ? 'Yeni şifre gerekli' : null
-        }
-      });
-    }
-
-    // Kullanıcıyı bul
-    const user = await User.findOne({ 
-      email,
-      resetCode,
-      resetCodeExpiry: { $gt: new Date() }
-    });
-
-    console.log(' Kullanıcı arama sonucu:', { found: !!user });
-
-    if (!user) {
-      return res.status(400).json({ 
-        message: 'Geçersiz veya süresi dolmuş kod',
-        details: {
-          resetCode: 'Geçersiz veya süresi dolmuş kod'
-        }
-      });
-    }
-
-    // Yeni şifre güvenliğini kontrol et
-    if (newPassword.length < 8) {
-      console.log(' Yeni şifre geçersiz:', 'Şifre en az 8 karakter uzunluğunda olmalıdır');
-      return res.status(400).json({ 
-        message: 'Şifre en az 8 karakter uzunluğunda olmalıdır',
-        details: {
-          newPassword: 'Şifre en az 8 karakter uzunluğunda olmalıdır'
-        }
-      });
-    }
-
-    // Yeni şifreyi hashle
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(newPassword, salt);
-
-    // Şifreyi güncelle ve reset kodunu temizle
-    user.password = hashedPassword;
-    user.resetCode = undefined;
-    user.resetCodeExpiry = undefined;
-    await user.save();
-
-    console.log(' Şifre değiştirildi:', { userId: user._id });
-
-    res.json({ message: 'Şifreniz başarıyla güncellendi' });
-
-  } catch (error) {
-    console.error(' Şifre sıfırlama hatası:', error);
-    res.status(500).json({ 
-      message: 'Şifre sıfırlanırken bir hata oluştu',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
-  }
+  res.status(503).json({ 
+    message: 'Şifre sıfırlama özelliği geçici olarak devre dışıdır. Lütfen daha sonra tekrar deneyiniz.',
+    status: 'maintenance'
+  });
 });
 
 // Log registered routes
