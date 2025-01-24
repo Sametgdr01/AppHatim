@@ -29,34 +29,11 @@ const validateEmail = (email) => {
 // Şifre validasyonu
 const validatePassword = (password) => {
     // En az 6 karakter
-    const minLength = password.length >= 6;
+    const isValid = password.length >= 6;
     
-    // En az bir büyük harf
-    const hasUpperCase = /[A-Z]/.test(password);
-    
-    // En az bir küçük harf
-    const hasLowerCase = /[a-z]/.test(password);
-    
-    // En az bir rakam
-    const hasNumber = /[0-9]/.test(password);
-    
-    // En az bir özel karakter
-    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
-    
-    const isValid = minLength && hasUpperCase && hasLowerCase && hasNumber && hasSpecialChar;
-    
-    let message = '';
-    if (!minLength) message += 'Şifre en az 6 karakter olmalıdır. ';
-    if (!hasUpperCase) message += 'En az bir büyük harf içermelidir. ';
-    if (!hasLowerCase) message += 'En az bir küçük harf içermelidir. ';
-    if (!hasNumber) message += 'En az bir rakam içermelidir. ';
-    if (!hasSpecialChar) message += 'En az bir özel karakter içermelidir. ';
-    
-    if (isValid) message = 'Geçerli şifre';
-
     return {
         isValid,
-        message: message.trim()
+        message: isValid ? 'Geçerli şifre' : 'Şifre en az 6 karakter olmalıdır'
     };
 };
 

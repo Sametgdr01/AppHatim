@@ -69,7 +69,15 @@ userSchema.pre('save', async function(next) {
 
 // Şifre karşılaştırma metodu
 userSchema.methods.comparePassword = async function(candidatePassword) {
-  return await bcrypt.compare(candidatePassword, this.password);
+  console.log('🔐 Şifre karşılaştırması:', {
+    candidatePassword,
+    hashedPassword: this.password,
+    candidateLength: candidatePassword.length,
+    hashedLength: this.password.length
+  });
+  const isMatch = await bcrypt.compare(candidatePassword, this.password);
+  console.log('🔐 Karşılaştırma sonucu:', { isMatch });
+  return isMatch;
 };
 
 module.exports = mongoose.model('User', userSchema);

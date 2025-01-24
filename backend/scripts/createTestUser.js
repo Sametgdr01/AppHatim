@@ -6,7 +6,7 @@ const User = require('../models/User');
 const createTestUser = async () => {
   try {
     // MongoDB'ye bağlan
-    await mongoose.connect(process.env.MONGO_URI);
+    await mongoose.connect(process.env.MONGODB_URI);
     console.log('✅ MongoDB\'ye bağlandı');
 
     // Test kullanıcı bilgileri

@@ -301,17 +301,23 @@ router.post('/login', async (req, res) => {
     }
 
     // Kullanıcıyı bul
+    console.log('🔍 Kullanıcı aranıyor:', {
+      cleanNumber: validation.cleanNumber,
+      alternatives: [validation.cleanNumber, `0${validation.cleanNumber}`]
+    });
+
     const user = await User.findOne({ 
       phoneNumber: { 
         $in: [validation.cleanNumber, `0${validation.cleanNumber}`] 
       }
     });
+
     console.log('🔍 Kullanıcı arama sonucu:', { 
       found: !!user,
-      phoneNumber: validation.cleanNumber,
-      userPhoneNumber: user?.phoneNumber,
-      userPassword: user?.password,
-      requestPassword: password
+      userId: user?._id,
+      userPhone: user?.phoneNumber,
+      requestPhone: phoneNumber,
+      hashedPassword: user?.password?.substring(0, 10) + '...'
     });
 
     if (!user) {
@@ -325,14 +331,8 @@ router.post('/login', async (req, res) => {
 
     // Şifreyi kontrol et
     console.log('🔑 Şifre karşılaştırması yapılıyor:', {
-      girilenSifre: password,
-      hashliSifre: user.password,
       passwordLength: password.length,
-      hashLength: user.password.length,
-      passwordType: typeof password,
-      hashType: typeof user.password,
-      passwordJSON: JSON.stringify(password),
-      hashJSON: JSON.stringify(user.password)
+      hashLength: user.password.length
     });
 
     const validPassword = await user.comparePassword(password);
@@ -354,7 +354,7 @@ router.post('/login', async (req, res) => {
       { expiresIn: '30d' }
     );
 
-    console.log(' Giriş başarılı:', { userId: user._id });
+    console.log('✅ Giriş başarılı:', { userId: user._id });
 
     // Send response
     res.json({
@@ -369,7 +369,7 @@ router.post('/login', async (req, res) => {
     });
 
   } catch (error) {
-    console.error(' Giriş hatası:', error);
+    console.error('❌ Giriş hatası:', error);
     res.status(500).json({ 
       message: 'Giriş yapılırken bir hata oluştu',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
