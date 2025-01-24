@@ -1,141 +1,73 @@
+import { Platform } from 'react-native';
+
 // Offline ve Ağ Kesintisi Yapılandırması
 export const OFFLINE_MODE_CONFIG = {
-  // Offline mod ayarları
-  ENABLED: true,
-  CACHE_DURATION: {
-    PROFILE_DATA: 24 * 60 * 60 * 1000, // 24 saat
-    LESSON_DATA: 12 * 60 * 60 * 1000,  // 12 saat
-    GENERAL_DATA: 6 * 60 * 60 * 1000   // 6 saat
-  },
-
-  // Offline veri stratejisi
-  DATA_STRATEGY: {
-    PRIORITIZE_CACHED_DATA: true,
-    AUTO_SYNC_ON_RECONNECT: true,
-    MAX_RETRY_SYNC_COUNT: 3
-  },
-
-  // Offline uyarı ve bilgilendirme
-  NOTIFICATIONS: {
-    SHOW_OFFLINE_BANNER: true,
-    OFFLINE_MESSAGE: 'Şu anda çevrimdışı moddasınız. Bazı özellikler sınırlı olabilir.',
-    RECONNECT_MESSAGE: 'İnternet bağlantınız yeniden kuruldu.'
-  },
-
-  // Offline işlem sınırlamaları
-  FEATURE_RESTRICTIONS: {
-    PROFILE_EDIT: false,
-    UPLOAD_CONTENT: false,
-    REAL_TIME_FEATURES: false
-  }
+  ENABLED: false,
+  CACHE_DURATION: 24 * 60 * 60 * 1000, // 24 saat
+  MAX_CACHE_SIZE: 50 * 1024 * 1024 // 50MB
 };
 
-// Sunucu ve Ağ Yapılandırması
-export const SERVER_CONFIG = {
-  // Ana sunucu adresi
-  PRIMARY_SERVERS: [
-    {
-      URL: 'https://apphatim.onrender.com/api',
-      NAME: 'Production Server',
-      PRIORITY: 1
-    }
-  ],
-
-  // Sunucu bağlantı parametreleri
-  CONNECTION: {
-    TIMEOUT_MS: 30000,     // 30 saniye timeout
-    MAX_RETRIES: 5,        // 5 kez deneme
-    RETRY_DELAY_MS: 5000,  // 5 saniye bekleme
-    
-    STRATEGY: {
-      PREFER_CLOUD: true,
-      FALLBACK_ON_FAILURE: true,
-      DYNAMIC_SERVER_SELECTION: false
-    }
-  },
-
-  // Hata yönetimi
-  ERROR_HANDLING: {
-    DETAILED_LOGGING: true,
-    RETRY_ON_FAILURE: true,
-    NOTIFY_USER_ON_PERSISTENT_ERRORS: true,
-    MAX_ERROR_NOTIFICATIONS: 3
-  }
-};
-
-// Sunucu seçimi için fonksiyon
-export const selectServerUrl = () => {
-  const serverUrl = SERVER_CONFIG.PRIMARY_SERVERS[0].URL;
-  console.log('🌐 Seçilen Sunucu Adresi:', serverUrl);
-  return serverUrl;
-};
-
-export const BASE_URL = selectServerUrl();
-
-// API yapılandırması
+// API Yapılandırması
 export const API_CONFIG = {
-  // Temel API ayarları
-  BASE_URL: BASE_URL,
-  VERSION: 'v1',
-  TIMEOUT: 60000, // 60 saniye
-
-  // İstek başlıkları
+  BASE_URL: __DEV__ 
+    ? Platform.select({
+        android: 'http://192.168.1.3:11000',
+        ios: 'http://localhost:11000',
+        default: 'http://localhost:11000'
+      })
+    : 'https://apphatim.onrender.com',
+  TIMEOUT: 30000, // 30 saniye
   HEADERS: {
-    'Content-Type': 'application/json',
     'Accept': 'application/json',
-    'X-Client-Version': '1.0.0',
-    'Connection': 'keep-alive'
+    'Content-Type': 'application/json'
   },
-
-  // İstek limitleri
-  RATE_LIMIT: {
-    MAX_REQUESTS_PER_MINUTE: 60,
-    BURST_LIMIT: 10
-  },
-
-  // Yeniden deneme stratejisi
-  RETRY_STRATEGY: {
+  RETRY: {
     MAX_RETRIES: 3,
-    BACKOFF_FACTOR: 2,
-    INITIAL_DELAY_MS: 1000,
-    MAX_DELAY_MS: 10000
+    RETRY_DELAY: 1000,
+    RETRY_STATUS_CODES: [408, 500, 502, 503, 504]
   }
 };
 
-// Ağ yapılandırması
-export const NETWORK_CONFIG = {
-  API_TIMEOUT: SERVER_CONFIG.CONNECTION.TIMEOUT_MS,
-  RETRY_COUNT: SERVER_CONFIG.CONNECTION.MAX_RETRIES,
-  RETRY_DELAY: SERVER_CONFIG.CONNECTION.RETRY_DELAY_MS,
-  
-  FALLBACK_SERVERS: SERVER_CONFIG.PRIMARY_SERVERS.map(server => server.URL),
-
-  // Bağlantı durumu kontrolleri
-  CONNECTION_CHECK: {
-    ENABLED: true,
-    INTERVAL_MS: 10000,
-    TIMEOUT_MS: 5000
-  }
-};
-
-// Hata yönetimi yapılandırması
-export const ERROR_HANDLING = {
-  NETWORK_ERROR_RETRY: SERVER_CONFIG.CONNECTION.STRATEGY.FALLBACK_ON_FAILURE,
-  MAX_NETWORK_RETRIES: SERVER_CONFIG.CONNECTION.MAX_RETRIES,
-  FALLBACK_ON_ERROR: SERVER_CONFIG.CONNECTION.STRATEGY.FALLBACK_ON_FAILURE,
-  
-  ALERT_TYPES: {
-    NETWORK_ERROR: 'Ağ Bağlantısı Hatası',
-    SERVER_ERROR: 'Sunucu Hatası',
-    TIMEOUT_ERROR: 'Zaman Aşımı Hatası',
-    AUTH_ERROR: 'Kimlik Doğrulama Hatası'
+// Hata Yönetimi Yapılandırması
+export const ERROR_HANDLING_CONFIG = {
+  DEFAULT_ERROR_MESSAGE: 'Bir hata oluştu. Lütfen daha sonra tekrar deneyin.',
+  NETWORK_ERROR_MESSAGE: 'İnternet bağlantınızı kontrol edip tekrar deneyin.',
+  TIMEOUT_ERROR_MESSAGE: 'Sunucu yanıt vermiyor. Lütfen daha sonra tekrar deneyin.',
+  SERVER_ERROR_MESSAGE: 'Sunucu kaynaklı bir hata oluştu. Lütfen daha sonra tekrar deneyin.',
+  AUTH_ERROR_MESSAGE: 'Oturum süreniz dolmuş. Lütfen tekrar giriş yapın.',
+  NETWORK_ERROR: {
+    MAX_RETRIES: 3,
+    RETRY_DELAY: 2000,
+    SHOW_ERROR: true,
+    USE_FALLBACK: true
   },
-  
-  ERROR_MESSAGES: {
-    NETWORK_ERROR: 'İnternet bağlantınızı kontrol edin',
-    SERVER_ERROR: 'Sunucu şu anda hizmet veremiyor',
-    TIMEOUT_ERROR: 'İstek zaman aşımına uğradı',
-    AUTH_ERROR: 'Oturum süreniz doldu'
+  API_ERROR: {
+    RETRY_ON_STATUS: [408, 429, 500, 502, 503, 504],
+    SHOW_ERROR: true,
+    LOG_DETAILS: true
+  },
+  AUTH_ERROR: {
+    AUTO_LOGOUT: true,
+    REDIRECT_TO_LOGIN: true,
+    CLEAR_CACHE: true
+  }
+};
+
+// Uygulama Yapılandırması
+export const APP_CONFIG = {
+  APP_NAME: 'AppHatim',
+  APP_VERSION: '1.0.0',
+  APP_BUNDLE_ID: 'com.apphatim',
+  APP_STORE_URL: 'https://play.google.com/store/apps/details?id=com.apphatim',
+  PRIVACY_POLICY_URL: 'https://apphatim.com/privacy',
+  TERMS_URL: 'https://apphatim.com/terms',
+  SUPPORT_EMAIL: 'support@apphatim.com',
+  SUPPORT_PHONE: '+90 538 373 34 59',
+  SUPPORT_WEBSITE: 'https://apphatim.com',
+  SOCIAL_MEDIA: {
+    FACEBOOK: 'https://facebook.com/apphatim',
+    TWITTER: 'https://twitter.com/apphatim',
+    INSTAGRAM: 'https://instagram.com/apphatim'
   }
 };
 

@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Alert } from 'react-native';
-import { TextInput, Button, Title, Text, Surface } from 'react-native-paper';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, ScrollView, Alert, TouchableOpacity } from 'react-native';
+import { TextInput, Button, Title, Text } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
+import { formatPhoneNumber } from '../utils/phoneUtils';
 
-const RegisterScreen = ({ navigation }) => {
+const RegisterScreen = ({ navigation, route }) => {
   const { register } = useAuth();
   const [formData, setFormData] = useState({
     firstName: '',
@@ -15,6 +16,38 @@ const RegisterScreen = ({ navigation }) => {
     confirmPassword: ''
   });
   const [loading, setLoading] = useState(false);
+
+  // Route params'dan gelen telefon numarasını al
+  useEffect(() => {
+    if (route.params?.phoneNumber) {
+      setFormData(prev => ({
+        ...prev,
+        phoneNumber: route.params.phoneNumber
+      }));
+    }
+  }, [route.params?.phoneNumber]);
+
+  const validatePassword = (password) => {
+    const hasMinLength = password.length >= 8;
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumber = /\d/.test(password);
+    
+    if (!hasMinLength) {
+      return 'Şifre en az 8 karakter olmalıdır';
+    }
+    if (!hasUpperCase) {
+      return 'Şifre en az bir büyük harf içermelidir';
+    }
+    if (!hasLowerCase) {
+      return 'Şifre en az bir küçük harf içermelidir';
+    }
+    if (!hasNumber) {
+      return 'Şifre en az bir rakam içermelidir';
+    }
+    
+    return null;
+  };
 
   const validateForm = () => {
     if (!formData.firstName.trim() || !formData.lastName.trim()) {
@@ -29,10 +62,13 @@ const RegisterScreen = ({ navigation }) => {
       Alert.alert('Hata', 'Lütfen geçerli bir e-posta adresi girin');
       return false;
     }
-    if (!formData.password.trim() || formData.password.length < 6) {
-      Alert.alert('Hata', 'Şifre en az 6 karakter olmalıdır');
+
+    const passwordError = validatePassword(formData.password);
+    if (passwordError) {
+      Alert.alert('Hata', passwordError);
       return false;
     }
+
     if (formData.password !== formData.confirmPassword) {
       Alert.alert('Hata', 'Şifreler eşleşmiyor');
       return false;
@@ -45,44 +81,64 @@ const RegisterScreen = ({ navigation }) => {
 
     setLoading(true);
     try {
-      await register(formData);
+      // Telefon numarasını formatla
+      const formattedPhone = formatPhoneNumber(formData.phoneNumber);
+      console.log('📱 Formatlanmış telefon:', formattedPhone);
+
+      // Kayıt verilerini hazırla
+      const registerData = {
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
+        phoneNumber: formattedPhone,
+        email: formData.email.toLowerCase().trim(),
+        password: formData.password
+      };
+
+      console.log('📝 Kayıt verileri:', { ...registerData, password: '***' });
+
+      // Email kontrolü
+      console.log('📧 Email kontrolü yapılıyor...');
+      await register(registerData);
+
       Alert.alert(
         'Başarılı',
-        'Kaydınız başarıyla tamamlandı.',
+        'Kaydınız başarıyla tamamlandı!',
         [
           {
             text: 'Tamam',
-            onPress: () => {
-              navigation.navigate('Login');
-            }
+            onPress: () => navigation.navigate('Login')
           }
         ]
       );
     } catch (error) {
-      Alert.alert('Hata', error.message || 'Kayıt işlemi başarısız oldu');
+      console.error('❌ Kayıt hatası:', error);
+      Alert.alert(
+        'Hata',
+        error.response?.data?.message || 'Kayıt sırasında bir hata oluştu'
+      );
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <Surface style={styles.surface}>
-        <MaterialCommunityIcons 
-          name="account-plus" 
-          size={64} 
-          color="#6200ee" 
-          style={styles.icon}
-        />
-        <Title style={styles.title}>Yeni Hesap Oluştur</Title>
+    <View style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
+        <View style={styles.surface}>
+          <MaterialCommunityIcons 
+            name="account-plus" 
+            size={50} 
+            color="#6200ee" 
+            style={styles.icon} 
+          />
+          <Title style={styles.title}>Kayıt Ol</Title>
 
-        <View style={styles.formContainer}>
           <TextInput
             label="Ad"
             value={formData.firstName}
             onChangeText={(text) => setFormData({ ...formData, firstName: text })}
-            mode="outlined"
             style={styles.input}
+            mode="outlined"
             left={<TextInput.Icon icon="account" />}
           />
 
@@ -90,18 +146,22 @@ const RegisterScreen = ({ navigation }) => {
             label="Soyad"
             value={formData.lastName}
             onChangeText={(text) => setFormData({ ...formData, lastName: text })}
-            mode="outlined"
             style={styles.input}
+            mode="outlined"
             left={<TextInput.Icon icon="account" />}
           />
 
           <TextInput
             label="Telefon Numarası"
             value={formData.phoneNumber}
-            onChangeText={(text) => setFormData({ ...formData, phoneNumber: text.replace(/[^0-9]/g, '') })}
-            mode="outlined"
-            style={styles.input}
+            onChangeText={(text) => {
+              const formatted = text.replace(/\D/g, '').slice(0, 10);
+              setFormData({ ...formData, phoneNumber: formatted });
+            }}
             keyboardType="phone-pad"
+            style={styles.input}
+            mode="outlined"
+            placeholder="5XX XXX XX XX"
             left={<TextInput.Icon icon="phone" />}
           />
 
@@ -109,20 +169,23 @@ const RegisterScreen = ({ navigation }) => {
             label="E-posta"
             value={formData.email}
             onChangeText={(text) => setFormData({ ...formData, email: text })}
-            mode="outlined"
-            style={styles.input}
             keyboardType="email-address"
+            style={styles.input}
+            mode="outlined"
             autoCapitalize="none"
             left={<TextInput.Icon icon="email" />}
           />
+          <Text style={styles.emailDescription}>
+            Şifrenizi unuttuğunuzda veya değiştirmek istediğinizde doğrulama kodunu gönderecegimiz e-posta adresi giriniz.
+          </Text>
 
           <TextInput
             label="Şifre"
             value={formData.password}
             onChangeText={(text) => setFormData({ ...formData, password: text })}
-            mode="outlined"
-            style={styles.input}
             secureTextEntry
+            style={styles.input}
+            mode="outlined"
             left={<TextInput.Icon icon="lock" />}
           />
 
@@ -130,66 +193,89 @@ const RegisterScreen = ({ navigation }) => {
             label="Şifre Tekrar"
             value={formData.confirmPassword}
             onChangeText={(text) => setFormData({ ...formData, confirmPassword: text })}
-            mode="outlined"
-            style={styles.input}
             secureTextEntry
+            style={styles.input}
+            mode="outlined"
             left={<TextInput.Icon icon="lock" />}
           />
 
           <Button
             mode="contained"
             onPress={handleRegister}
+            style={styles.button}
             loading={loading}
             disabled={loading}
-            style={styles.button}
           >
-            Kayıt Ol
+            {loading ? 'Kaydediliyor...' : 'Kayıt Ol'}
           </Button>
 
-          <Button
-            mode="text"
-            onPress={() => navigation.navigate('Login')}
-            style={styles.linkButton}
-          >
-            Zaten hesabınız var mı? Giriş yapın
-          </Button>
+          <View style={styles.loginContainer}>
+            <Text style={styles.loginText}>Zaten hesabınız var mı?</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+              <Text style={styles.loginLink}>Giriş Yap</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </Surface>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#fff',
+    padding: 20,
+    justifyContent: 'center'
+  },
+  scrollContainer: {
+    flexGrow: 1,
+    justifyContent: 'center'
   },
   surface: {
-    margin: 16,
-    padding: 16,
-    borderRadius: 8,
+    padding: 20,
+    borderRadius: 10,
     elevation: 4,
-  },
-  icon: {
-    alignSelf: 'center',
-    marginBottom: 16,
+    backgroundColor: '#fff',
+    width: '100%',
+    alignSelf: 'center'
   },
   title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 20,
     textAlign: 'center',
-    marginBottom: 24,
-  },
-  formContainer: {
-    gap: 16,
+    color: '#333'
   },
   input: {
-    backgroundColor: '#fff',
+    marginBottom: 12,
+    backgroundColor: '#fff'
+  },
+  emailDescription: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: -8,
+    marginBottom: 12,
+    paddingHorizontal: 5
   },
   button: {
-    marginTop: 8,
+    marginTop: 10,
+    marginBottom: 10
   },
-  linkButton: {
-    marginTop: 8,
+  loginContainer: {
+    marginTop: 20,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center'
   },
+  loginText: {
+    color: '#666',
+    marginRight: 5
+  },
+  loginLink: {
+    color: '#007AFF',
+    fontWeight: 'bold'
+  }
 });
 
 export default RegisterScreen;

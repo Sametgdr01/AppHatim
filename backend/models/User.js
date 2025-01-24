@@ -4,16 +4,19 @@ const bcrypt = require('bcryptjs');
 const userSchema = new mongoose.Schema({
   firstName: {
     type: String,
-    required: [true, 'İsim zorunludur']
+    required: [true, 'İsim zorunludur'],
+    trim: true
   },
   lastName: {
     type: String,
-    required: [true, 'Soyisim zorunludur']
+    required: [true, 'Soyisim zorunludur'],
+    trim: true
   },
   phoneNumber: {
     type: String,
     required: [true, 'Telefon numarası zorunludur'],
     unique: true,
+    trim: true,
     validate: {
       validator: function(v) {
         return /^0?5[0-9]{9}$/.test(v);
@@ -25,6 +28,7 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: [true, 'E-posta zorunludur'],
     unique: true,
+    trim: true,
     lowercase: true,
     validate: {
       validator: function(v) {
@@ -37,6 +41,12 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Şifre zorunludur'],
     minlength: 6
+  },
+  resetPasswordCode: {
+    type: String
+  },
+  resetPasswordExpires: {
+    type: Date
   },
   createdAt: {
     type: Date,

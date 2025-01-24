@@ -4,7 +4,6 @@ import { Surface, Text, Title, Avatar, ProgressBar } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import NotificationService from '../services/NotificationService';
-import { WebView } from 'react-native-webview';
 import SupportModal from '../components/SupportModal';
 
 const HomeScreen = ({ navigation }) => {
@@ -122,10 +121,6 @@ const HomeScreen = ({ navigation }) => {
                 <MaterialCommunityIcons name="close" size={24} color="#000" />
               </TouchableOpacity>
             </View>
-            <WebView
-              source={{ uri: 'https://iyzi.link/AJ8JeQ' }}
-              style={styles.webview}
-            />
           </View>
         </View>
       </Modal>

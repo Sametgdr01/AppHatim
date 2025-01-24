@@ -1,12 +1,13 @@
-import React, { useContext, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, ImageBackground } from 'react-native';
 import { Surface, Text, Title, Button, Avatar, Divider } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { AuthContext } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 import * as ImagePicker from 'expo-image-picker';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const ProfileScreen = ({ navigation }) => {
-  const { signOut, user, isAdmin } = useContext(AuthContext);
+  const { user, isAdmin, logout } = useAuth();
 
   useEffect(() => {
     console.log('ProfileScreen user:', user);
@@ -42,100 +43,101 @@ const ProfileScreen = ({ navigation }) => {
     );
   }
 
+  const renderMenuItem = (icon, title, onPress, color = '#6200ee', badge = null) => (
+    <TouchableOpacity 
+      style={styles.menuItem}
+      onPress={onPress}
+    >
+      <View style={styles.menuItemLeft}>
+        <MaterialCommunityIcons name={icon} size={24} color={color} />
+        <Text style={[styles.menuItemText, { color: color }]}>{title}</Text>
+      </View>
+      {badge ? (
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>{badge}</Text>
+        </View>
+      ) : (
+        <MaterialCommunityIcons name="chevron-right" size={24} color="#999" />
+      )}
+    </TouchableOpacity>
+  );
+
   return (
-    <ScrollView style={styles.container}>
-      {/* Profil Başlığı - Super Admin için özelleştirilmiş */}
-      <View style={styles.profileHeader}>
-        <Avatar.Image 
-          source={{ uri: user?.profileImage || 'https://via.placeholder.com/150' }} 
-          size={100} 
-        />
-        <View style={styles.profileInfo}>
-          <Text style={styles.profileName}>{user?.fullName || user?.name}</Text>
-          <View style={styles.roleContainer}>
-            <MaterialCommunityIcons 
-              name={isSuperAdmin ? "shield-crown" : "account"} 
-              size={20} 
-              color={isSuperAdmin ? "#FF5722" : "#6200ee"} 
+    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+      <LinearGradient
+        colors={['#6200ee', '#9c4dff']}
+        style={styles.headerGradient}
+      >
+        <View style={styles.profileHeader}>
+          <TouchableOpacity onPress={pickImage} style={styles.avatarContainer}>
+            <Avatar.Image 
+              source={{ uri: user?.profileImage || 'https://via.placeholder.com/150' }} 
+              size={100}
+              style={styles.avatar}
             />
-            <Text style={[
-              styles.roleText, 
-              { 
-                color: isSuperAdmin ? "#FF5722" : "#6200ee",
-                fontWeight: isSuperAdmin ? 'bold' : 'normal'
-              }
-            ]}>
-              {isSuperAdmin ? "Super Admin" : "Kullanıcı"}
-            </Text>
+            <View style={styles.editAvatarBadge}>
+              <MaterialCommunityIcons name="camera" size={16} color="#fff" />
+            </View>
+          </TouchableOpacity>
+          <View style={styles.profileInfo}>
+            <Text style={styles.profileName}>{user?.firstName} {user?.lastName}</Text>
+            <View style={styles.roleContainer}>
+              <MaterialCommunityIcons 
+                name={isSuperAdmin ? "shield-crown" : "account"} 
+                size={20} 
+                color="#fff"
+              />
+              <Text style={styles.roleText}>
+                {isSuperAdmin ? "Super Admin" : "Kullanıcı"}
+              </Text>
+            </View>
           </View>
         </View>
-      </View>
+      </LinearGradient>
 
-      {/* Ayarlar Menüsü */}
+      <Surface style={styles.statsCard}>
+        <View style={styles.statItem}>
+          <MaterialCommunityIcons name="book-open-variant" size={24} color="#6200ee" style={styles.statIcon} />
+          <Text style={styles.statNumber}>12</Text>
+          <Text style={styles.statLabel}>Hatim</Text>
+        </View>
+        <View style={styles.statDivider} />
+        <View style={styles.statItem}>
+          <MaterialCommunityIcons name="book-open-page-variant" size={24} color="#6200ee" style={styles.statIcon} />
+          <Text style={styles.statNumber}>48</Text>
+          <Text style={styles.statLabel}>Cüz</Text>
+        </View>
+        <View style={styles.statDivider} />
+        <View style={styles.statItem}>
+          <MaterialCommunityIcons name="account-group" size={24} color="#6200ee" style={styles.statIcon} />
+          <Text style={styles.statNumber}>5</Text>
+          <Text style={styles.statLabel}>Grup</Text>
+        </View>
+      </Surface>
+
       <Surface style={styles.menuCard}>
         <Text style={styles.sectionTitle}>Ayarlar</Text>
         
-        <TouchableOpacity 
-          style={styles.menuItem}
-          onPress={() => navigation.navigate('EditProfile')}
-        >
-          <MaterialCommunityIcons name="account-edit" size={24} color="#6200ee" />
-          <Text style={styles.menuItemText}>Profili Düzenle</Text>
-        </TouchableOpacity>
+        {renderMenuItem("account-edit", "Profili Düzenle", () => navigation.navigate('EditProfile'))}
+        {renderMenuItem("bell-outline", "Bildirim Ayarları", () => navigation.navigate('NotificationSettings'), '#6200ee', '3')}
 
-        <TouchableOpacity 
-          style={styles.menuItem}
-          onPress={() => navigation.navigate('NotificationSettings')}
-        >
-          <MaterialCommunityIcons name="bell-outline" size={24} color="#6200ee" />
-          <Text style={styles.menuItemText}>Bildirim Ayarları</Text>
-        </TouchableOpacity>
-
-        {/* Super Admin için Özel Menüler */}
-        {(isAdmin && (user?.email === 'gudersamet@gmail.com' || user?.role === 'superadmin')) && (
+        {isSuperAdmin && (
           <>
-            <View style={styles.divider} />
+            <Divider style={styles.divider} />
             <Text style={styles.sectionSubtitle}>Yönetici İşlemleri</Text>
             
-            <TouchableOpacity 
-              style={styles.menuItem}
-              onPress={() => navigation.navigate('UserManagement')}
-            >
-              <MaterialCommunityIcons name="account-multiple-plus" size={24} color="#FF5722" />
-              <Text style={[styles.menuItemText, { color: '#FF5722' }]}>Kullanıcı Yönetimi</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={styles.menuItem}
-              onPress={() => navigation.navigate('AdminPanel')}
-            >
-              <MaterialCommunityIcons name="shield-account" size={24} color="#FF5722" />
-              <Text style={[styles.menuItemText, { color: '#FF5722' }]}>Admin Paneli</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={styles.menuItem}
-              onPress={() => navigation.navigate('HatimManagement')}
-            >
-              <MaterialCommunityIcons name="book-multiple" size={24} color="#FF5722" />
-              <Text style={[styles.menuItemText, { color: '#FF5722' }]}>Hatim Yönetimi</Text>
-            </TouchableOpacity>
+            {renderMenuItem("account-multiple-plus", "Kullanıcı Yönetimi", () => navigation.navigate('UserManagement'), '#FF5722')}
+            {renderMenuItem("shield-account", "Admin Paneli", () => navigation.navigate('AdminPanel'), '#FF5722')}
+            {renderMenuItem("book-multiple", "Hatim Yönetimi", () => navigation.navigate('HatimManagement'), '#FF5722')}
           </>
         )}
 
-        <TouchableOpacity 
-          style={styles.menuItem}
-          onPress={() => navigation.navigate('AboutApp')}
-        >
-          <MaterialCommunityIcons name="information-outline" size={24} color="#6200ee" />
-          <Text style={styles.menuItemText}>Uygulama Hakkında</Text>
-        </TouchableOpacity>
+        {renderMenuItem("information-outline", "Uygulama Hakkında", () => navigation.navigate('AboutApp'))}
       </Surface>
 
-      {/* Çıkış Yap Butonu */}
       <TouchableOpacity 
         style={styles.logoutButton}
-        onPress={signOut}
+        onPress={logout}
       >
         <MaterialCommunityIcons name="logout" size={24} color="white" />
         <Text style={styles.logoutButtonText}>Çıkış Yap</Text>
@@ -147,83 +149,163 @@ const ProfileScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f5f5f5'
+  },
+  contentContainer: {
+    flexGrow: 1
+  },
+  headerGradient: {
+    paddingTop: 40,
+    paddingBottom: 30
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center'
   },
   profileHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    paddingHorizontal: 20
+  },
+  avatarContainer: {
+    position: 'relative'
+  },
+  avatar: {
+    borderWidth: 4,
+    borderColor: '#fff'
+  },
+  editAvatarBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: '#6200ee',
+    borderRadius: 15,
+    width: 30,
+    height: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#fff'
   },
   profileInfo: {
-    marginLeft: 16,
+    marginLeft: 20,
+    flex: 1
   },
   profileName: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 4
   },
   roleContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
+    alignItems: 'center'
   },
   roleText: {
     marginLeft: 8,
-    fontSize: 14,
+    fontSize: 16,
+    color: '#fff',
+    opacity: 0.9
   },
-  divider: {
-    height: 1,
+  statsCard: {
+    flexDirection: 'row',
+    margin: 20,
+    marginTop: -15,
+    borderRadius: 15,
+    padding: 20,
+    elevation: 4,
+    backgroundColor: '#fff'
+  },
+  statItem: {
+    flex: 1,
+    alignItems: 'center'
+  },
+  statIcon: {
+    marginBottom: 8
+  },
+  statNumber: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#6200ee'
+  },
+  statLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 4
+  },
+  statDivider: {
+    width: 1,
     backgroundColor: '#eee',
-    marginVertical: 12,
+    marginHorizontal: 15
+  },
+  menuCard: {
+    margin: 20,
+    borderRadius: 15,
+    padding: 20,
+    backgroundColor: '#fff',
+    elevation: 2
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    color: '#333'
   },
   sectionSubtitle: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#666',
-    paddingHorizontal: 16,
-    marginBottom: 8,
-  },
-  menuCard: {
-    margin: 16,
-    borderRadius: 12,
-    padding: 16,
-    backgroundColor: 'white',
-    elevation: 2,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    marginBottom: 16,
+    marginBottom: 12
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    justifyContent: 'space-between',
+    paddingVertical: 12
+  },
+  menuItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center'
   },
   menuItemText: {
+    marginLeft: 12,
     fontSize: 16,
-    marginLeft: 16,
+    fontWeight: '500'
+  },
+  badge: {
+    backgroundColor: '#6200ee',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 2
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold'
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#eee',
+    marginVertical: 16
   },
   logoutButton: {
-    backgroundColor: '#FF0000',
-    padding: 16,
-    borderRadius: 12,
-    margin: 16,
     flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f44336',
+    margin: 20,
+    marginTop: 10,
+    padding: 16,
+    borderRadius: 15,
+    elevation: 2
   },
   logoutButtonText: {
-    fontSize: 16,
     color: 'white',
     marginLeft: 8,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+    fontSize: 16,
+    fontWeight: 'bold'
+  }
 });
 
 export default ProfileScreen;

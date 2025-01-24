@@ -2,27 +2,29 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-// Import screens
+// Screens
 import HomeScreen from '../screens/HomeScreen';
-import MyJuzScreen from '../screens/MyJuzScreen';
-import GroupHatimsScreen from '../screens/GroupHatimsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import NotificationsScreen from '../screens/NotificationsScreen';
+import GroupsScreen from '../screens/GroupsScreen';
 
 const Tab = createBottomTabNavigator();
 
-const TabNavigator = () => {
+const BottomTabNavigator = () => {
   return (
     <Tab.Navigator
       screenOptions={{
-        tabBarActiveTintColor: '#6200ee',
-        tabBarInactiveTintColor: 'gray',
-        headerStyle: {
-          backgroundColor: '#6200ee',
+        tabBarActiveTintColor: '#2e7d32',
+        tabBarInactiveTintColor: '#757575',
+        tabBarStyle: {
+          backgroundColor: '#ffffff',
+          borderTopWidth: 1,
+          borderTopColor: '#e0e0e0',
+          paddingBottom: 5,
+          paddingTop: 5,
+          height: 60
         },
-        headerTintColor: '#fff',
-        headerTitleStyle: {
-          fontWeight: 'bold',
-        },
+        headerShown: false
       }}
     >
       <Tab.Screen
@@ -31,28 +33,25 @@ const TabNavigator = () => {
         options={{
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="home" color={color} size={size} />
-          ),
-          headerTitle: 'Ana Sayfa',
+          )
         }}
       />
       <Tab.Screen
-        name="Cüzlerim"
-        component={MyJuzScreen}
-        options={{
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="book-open-variant" color={color} size={size} />
-          ),
-          headerTitle: 'Cüzlerim',
-        }}
-      />
-      <Tab.Screen
-        name="Grup Cüzleri"
-        component={GroupHatimsScreen}
+        name="Gruplar"
+        component={GroupsScreen}
         options={{
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="account-group" color={color} size={size} />
-          ),
-          headerTitle: 'Grup Cüzleri',
+          )
+        }}
+      />
+      <Tab.Screen
+        name="Bildirimler"
+        component={NotificationsScreen}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="bell" color={color} size={size} />
+          )
         }}
       />
       <Tab.Screen
@@ -61,12 +60,11 @@ const TabNavigator = () => {
         options={{
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="account" color={color} size={size} />
-          ),
-          headerTitle: 'Profil',
+          )
         }}
       />
     </Tab.Navigator>
   );
 };
 
-export default TabNavigator; 
+export default BottomTabNavigator;

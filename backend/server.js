@@ -1,73 +1,128 @@
-require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const authRoutes = require('./routes/auth');
+const dotenv = require('dotenv');
+const net = require('net');
+const os = require('os');
 
-// JWT Secret key'i tanımla
-process.env.JWT_SECRET = process.env.JWT_SECRET || 'apphatim-secret-key-2024';
+// Environment variables
+dotenv.config();
 
+// MongoDB connection string
+const MONGODB_URI = process.env.MONGODB_URI;
+const PORT = parseInt(process.env.PORT || '11000');
+
+if (!MONGODB_URI) {
+  console.error('❌ MONGODB_URI environment variable is not set');
+  process.exit(1);
+}
+
+// Get local IP addresses
+const getLocalIPs = () => {
+  const interfaces = os.networkInterfaces();
+  const addresses = [];
+  for (const k in interfaces) {
+    for (const k2 in interfaces[k]) {
+      const address = interfaces[k][k2];
+      if (address.family === 'IPv4' && !address.internal) {
+        addresses.push(address.address);
+      }
+    }
+  }
+  return addresses;
+};
+
+// Express app
 const app = express();
 
-// Middleware
+// CORS configuration
 app.use(cors({
-  origin: '*', 
+  origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
+// Body parser middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`\n📝 [${new Date().toISOString()}] ${req.method} ${req.url}`);
+  console.log('📨 Headers:', req.headers);
+  console.log('📍 Client IP:', req.ip);
+  next();
 });
 
-// MongoDB bağlantısı
-const password = encodeURIComponent('App@Hatim1071');
-const MONGO_URI = `mongodb+srv://AppHatim:${password}@cluster0.1r6pu.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
+// Routes
+const authRoutes = require('./routes/auth');
+app.use('/api/auth', authRoutes);
 
-mongoose.connect(MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-  serverSelectionTimeoutMS: 5000,
-  socketTimeoutMS: 45000,
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    port: PORT,
+    localIPs: getLocalIPs()
+  });
+});
+
+// MongoDB connection
+mongoose.connect(MONGODB_URI, {
+  useNewUrlParser: false,
+  useUnifiedTopology: false
 })
 .then(() => {
-  console.log('MongoDB bağlantısı başarılı');
+  console.log('✅ MongoDB bağlantısı başarılı');
   
-  // Routes
-  app.use('/api/auth', authRoutes);
-
-  // Test endpoint'i
-  app.get('/api/test', (req, res) => {
-    res.json({ message: 'API çalışıyor!' });
-  });
-
-  // Error handling
-  app.use((err, req, res, next) => {
-    console.error('Hata:', err.stack);
-    res.status(500).json({ 
-      error: 'Bir hata oluştu!', 
-      message: err.message,
-      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined 
+  // Start server
+  const server = app.listen(PORT, '0.0.0.0', () => {
+    const localIPs = getLocalIPs();
+    console.log(`\n🚀 Server ${PORT} adresinde çalışıyor`);
+    console.log(`   API URL: http://localhost:${PORT}`);
+    console.log(`   API URL (Emulator): http://10.0.2.2:${PORT}`);
+    console.log('\n🌐 Local IPs:');
+    localIPs.forEach(ip => {
+      console.log(`   - http://${ip}:${PORT}`);
     });
   });
 
-  // Render.com için port ayarı
-  const port = process.env.PORT || 10000;
-  const host = '0.0.0.0';
-  
-  app.listen(port, host, () => {
-    console.log(`Server ${port} portunda çalışıyor (${host})`);
-    console.log('Environment:', process.env.NODE_ENV);
-    console.log('External URL:', process.env.RENDER_EXTERNAL_URL);
-    console.log('JWT Secret:', process.env.JWT_SECRET ? 'Ayarlandı' : 'Ayarlanmadı');
+  // Hata yakalama
+  server.on('error', (error) => {
+    console.error('❌ Sunucu hatası:', error);
+    if (error.code === 'EADDRINUSE') {
+      console.error(`❌ Port ${PORT} zaten kullanımda`);
+    }
+    process.exit(1);
+  });
+
+  // Graceful shutdown
+  process.on('SIGTERM', () => {
+    console.log('⚠️ SIGTERM received. Shutting down gracefully...');
+    server.close(() => {
+      console.log('✅ Server closed');
+      mongoose.connection.close(false, () => {
+        console.log('✅ MongoDB connection closed');
+        process.exit(0);
+      });
+    });
   });
 })
 .catch((err) => {
-  console.error('MongoDB bağlantı hatası:', err);
+  console.error('❌ MongoDB bağlantı hatası:', err);
   process.exit(1);
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('❌ Sunucu hatası:', {
+    message: err.message,
+    stack: err.stack
+  });
+  
+  res.status(500).json({ 
+    error: 'Sunucu hatası',
+    message: process.env.NODE_ENV === 'development' ? err.message : 'Bir hata oluştu'
+  });
 });
