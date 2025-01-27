@@ -54,6 +54,11 @@ app.use((req, res, next) => {
   next();
 });
 
+const path = require('path');
+require('dotenv').config({ 
+  path: path.resolve(__dirname, '.env') 
+});
+
 // Routes
 const authRoutes = require('./routes/auth');
 const hatimRoutes = require('./routes/hatim');
@@ -62,6 +67,24 @@ const userRoutes = require('./routes/user');
 app.use('/api/auth', authRoutes);
 app.use('/api/hatim', hatimRoutes);
 app.use('/api/user', userRoutes);
+
+// Genel API route'u
+app.get('/api', (req, res) => {
+  res.json({
+    status: 'OK',
+    message: 'AppHatim Backend API',
+    availableRoutes: [
+      '/api/health',
+      '/api/auth/login',
+      '/api/auth/register',
+      '/api/hatim/list',
+      '/api/hatim/join',
+      '/api/user/profile'
+    ],
+    version: '1.0.0',
+    timestamp: new Date().toISOString()
+  });
+});
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
