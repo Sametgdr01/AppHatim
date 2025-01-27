@@ -1,45 +1,46 @@
-require('dotenv').config();
 const mongoose = require('mongoose');
 const User = require('../models/User');
+const bcrypt = require('bcryptjs');
+require('dotenv').config();
 
-const checkUser = async (phoneNumber) => {
+async function checkUser() {
   try {
     // MongoDB'ye bağlan
     await mongoose.connect(process.env.MONGODB_URI);
     console.log('✅ MongoDB\'ye bağlandı');
 
-    // Kullanıcıyı bul
+    // Test kullanıcısını bul
+    const phoneNumber = '5383733459';
     const user = await User.findOne({ phoneNumber });
-    
+
     if (!user) {
-      console.log('❌ Kullanıcı bulunamadı');
+      console.log('❌ Kullanıcı bulunamadı:', phoneNumber);
       return;
     }
 
-    // Kullanıcı bilgilerini göster (şifre hariç)
     console.log('✅ Kullanıcı bulundu:', {
       _id: user._id,
       firstName: user.firstName,
       lastName: user.lastName,
       phoneNumber: user.phoneNumber,
       email: user.email,
-      password: user.password // Hash'lenmiş şifreyi göster
+      password: user.password.substring(0, 10) + '...'
+    });
+
+    // Şifre kontrolü
+    const testPassword = '123456';
+    const isMatch = await bcrypt.compare(testPassword, user.password);
+    console.log('🔐 Şifre kontrolü:', {
+      testPassword,
+      hashedPassword: user.password,
+      isMatch
     });
 
   } catch (error) {
-    console.error('❌ Hata:', error);
+    console.error('❌ Hata:', error.message);
   } finally {
     await mongoose.disconnect();
-    process.exit(0);
   }
-};
-
-// Komut satırı argümanını al
-const phoneNumber = process.argv[2];
-
-if (!phoneNumber) {
-  console.error('❌ Telefon numarası gerekli');
-  process.exit(1);
 }
 
-checkUser(phoneNumber);
+checkUser();

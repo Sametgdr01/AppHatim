@@ -1,18 +1,19 @@
-// Learn more https://docs.expo.io/guides/customizing-metro
 const { getDefaultConfig } = require('expo/metro-config');
-const path = require('path');
 
-/** @type {import('expo/metro-config').MetroConfig} */
-const config = getDefaultConfig(__dirname);
+module.exports = (() => {
+  const config = getDefaultConfig(__dirname);
 
-// Backend dosyalarını dışla
-config.resolver.blockList = [
-  /backend\/.*/,
-];
+  const { transformer, resolver } = config;
 
-// Sadece mobile klasörünü tara
-config.watchFolders = [
-  path.resolve(__dirname, './'),
-];
+  config.transformer = {
+    ...transformer,
+    babelTransformerPath: require.resolve('metro-react-native-babel-transformer'),
+  };
 
-module.exports = config;
+  config.resolver = {
+    ...resolver,
+    sourceExts: resolver.sourceExts.concat('cjs'),
+  };
+
+  return config;
+})();

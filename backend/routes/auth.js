@@ -141,239 +141,119 @@ router.post('/check-email-format', async (req, res) => {
   }
 });
 
-// Kullanıcı kaydı
+// @route   POST /api/auth/register
+// @desc    Register user
+// @access  Public
 router.post('/register', async (req, res) => {
   try {
-    console.log(' Kayıt isteği alındı:', req.body);
-    const { firstName, lastName, phoneNumber, email, password } = req.body;
+    console.log('📝 Register isteği:', { ...req.body, password: '***' });
 
-    // Zorunlu alanları kontrol et
-    if (!firstName || !lastName || !phoneNumber || !password) {
-      console.log(' Eksik bilgi:', { 
-        firstName: !!firstName, 
-        lastName: !!lastName, 
-        phoneNumber: !!phoneNumber, 
-        password: !!password 
-      });
-      return res.status(400).json({ 
-        message: 'Tüm zorunlu alanları doldurun',
-        details: {
-          firstName: !firstName ? 'İsim gerekli' : null,
-          lastName: !lastName ? 'Soyisim gerekli' : null,
-          phoneNumber: !phoneNumber ? 'Telefon numarası gerekli' : null,
-          password: !password ? 'Şifre gerekli' : null
-        }
-      });
+    const { firstName, lastName, phoneNumber, password } = req.body;
+
+    // Kullanıcının var olup olmadığını kontrol et
+    let user = await User.findOne({ phoneNumber });
+    if (user) {
+      console.log('❌ Kullanıcı zaten var');
+      return res.status(400).json({ message: 'Bu telefon numarası zaten kayıtlı' });
     }
 
-    // Telefon numarası validasyonu
-    const phoneValidation = validatePhoneNumber(phoneNumber);
-    if (!phoneValidation.isValid) {
-      console.log(' Telefon numarası geçersiz:', phoneValidation.message);
-      return res.status(400).json({ 
-        message: phoneValidation.message,
-        details: {
-          phoneNumber: phoneValidation.message
-        }
-      });
-    }
-
-    // Email validasyonu (opsiyonel)
-    if (email) {
-      const emailValidation = validateEmail(email);
-      if (!emailValidation.isValid) {
-        console.log(' Email geçersiz:', emailValidation.message);
-        return res.status(400).json({ 
-          message: emailValidation.message,
-          details: {
-            email: emailValidation.message
-          }
-        });
-      }
-    }
-
-    // Telefon numarası kontrolü
-    const existingPhone = await User.findOne({ 
-      phoneNumber: { 
-        $in: [phoneValidation.cleanNumber, `0${phoneValidation.cleanNumber}`] 
-      }
+    // Yeni kullanıcı oluştur
+    user = new User({
+      firstName,
+      lastName,
+      phoneNumber,
+      password
     });
-    console.log(' Telefon kontrolü sonucu:', { exists: !!existingPhone });
-
-    if (existingPhone) {
-      return res.status(409).json({ 
-        message: 'Bu telefon numarası zaten kayıtlı',
-        details: {
-          phoneNumber: 'Bu telefon numarası zaten kayıtlı'
-        }
-      });
-    }
-
-    // Email kontrolü (opsiyonel)
-    if (email) {
-      const existingEmail = await User.findOne({ email });
-      console.log(' Email kontrolü sonucu:', { exists: !!existingEmail });
-
-      if (existingEmail) {
-        return res.status(409).json({ 
-          message: 'Bu email adresi zaten kayıtlı',
-          details: {
-            email: 'Bu email adresi zaten kayıtlı'
-          }
-        });
-      }
-    }
 
     // Şifreyi hashle
     const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    user.password = await bcrypt.hash(password, salt);
 
-    // Yeni kullanıcı oluştur
-    const user = new User({
-      firstName,
-      lastName,
-      phoneNumber: phoneValidation.cleanNumber,
-      email,
-      password: hashedPassword
+    // Kullanıcıyı kaydet
+    await user.save();
+    console.log('✅ Kullanıcı kaydedildi');
+
+    // Token oluştur
+    const payload = {
+      userId: user.id
+    };
+
+    const token = jwt.sign(payload, process.env.JWT_SECRET, {
+      expiresIn: '1h'
     });
 
-    await user.save();
-    console.log(' Kullanıcı kaydedildi:', { userId: user._id });
+    console.log('✅ Token oluşturuldu');
 
-    // JWT token oluştur
-    const token = jwt.sign(
-      { userId: user._id },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-
-    res.status(201).json({
-      message: 'Kayıt başarılı',
+    res.json({
       token,
       user: {
+        _id: user.id,
         firstName: user.firstName,
         lastName: user.lastName,
         phoneNumber: user.phoneNumber,
         email: user.email
       }
     });
-
-  } catch (error) {
-    console.error(' Kayıt hatası:', error);
-    res.status(500).json({ 
-      message: 'Kayıt yapılırken bir hata oluştu',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
+  } catch (err) {
+    console.error('❌ Register hatası:', err);
+    res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
 
-// Kullanıcı girişi
+// @route   POST /api/auth/login
+// @desc    Login user
+// @access  Public
 router.post('/login', async (req, res) => {
   try {
-    console.log('\n🔐 Login isteği alındı:');
-    console.log('📱 Request body:', JSON.stringify(req.body, null, 2));
+    console.log('📱 Login isteği:', { ...req.body, password: '***' });
+
     const { phoneNumber, password } = req.body;
 
-    // Zorunlu alanları kontrol et
-    if (!phoneNumber || !password) {
-      console.log('❌ Eksik bilgi:', { phoneNumber: !!phoneNumber, password: !!password });
-      return res.status(400).json({ 
-        message: 'Telefon numarası ve şifre gerekli',
-        details: {
-          phoneNumber: !phoneNumber ? 'Telefon numarası gerekli' : null,
-          password: !password ? 'Şifre gerekli' : null
-        }
-      });
-    }
-
-    // Telefon numarası validasyonu
-    const validation = validatePhoneNumber(phoneNumber);
-    console.log('📞 Telefon validasyonu:', validation);
-    
-    if (!validation.isValid) {
-      console.log('❌ Telefon numarası geçersiz:', validation.message);
-      return res.status(400).json({ 
-        message: validation.message,
-        details: {
-          phoneNumber: validation.message
-        }
-      });
-    }
-
     // Kullanıcıyı bul
-    console.log('🔍 Kullanıcı aranıyor:', {
-      cleanNumber: validation.cleanNumber,
-      alternatives: [validation.cleanNumber, `0${validation.cleanNumber}`]
-    });
-
-    const user = await User.findOne({ 
-      phoneNumber: { 
-        $in: [validation.cleanNumber, `0${validation.cleanNumber}`] 
-      }
-    });
-
-    console.log('🔍 Kullanıcı arama sonucu:', { 
-      found: !!user,
-      userId: user?._id,
-      userPhone: user?.phoneNumber,
-      requestPhone: phoneNumber,
-      hashedPassword: user?.password?.substring(0, 10) + '...'
-    });
-
+    const user = await User.findOne({ phoneNumber });
     if (!user) {
-      return res.status(401).json({ 
-        message: 'Geçersiz telefon numarası veya şifre',
-        details: {
-          phoneNumber: 'Geçersiz telefon numarası veya şifre'
-        }
-      });
+      console.log('❌ Kullanıcı bulunamadı');
+      return res.status(400).json({ message: 'Geçersiz telefon numarası veya şifre' });
     }
+    console.log('✅ Kullanıcı bulundu:', { ...user.toObject(), password: '$2a$10$FeX...' });
 
-    // Şifreyi kontrol et
-    console.log('🔑 Şifre karşılaştırması yapılıyor:', {
-      passwordLength: password.length,
-      hashLength: user.password.length
+    // Şifreyi karşılaştır
+    console.log('🔐 Şifre karşılaştırması başlıyor:', {
+      candidatePassword: password,
+      hashedPassword: user.password
+    });
+    const isMatch = await bcrypt.compare(password, user.password);
+    console.log('🔐 Karşılaştırma sonucu:', { isMatch });
+    if (!isMatch) {
+      console.log('❌ Şifre yanlış');
+      return res.status(400).json({ message: 'Geçersiz telefon numarası veya şifre' });
+    }
+    console.log('✅ Şifre doğru');
+
+    // Token oluştur
+    const payload = {
+      userId: user.id
+    };
+
+    const token = jwt.sign(payload, process.env.JWT_SECRET, {
+      expiresIn: '1h'
     });
 
-    const validPassword = await user.comparePassword(password);
-    console.log('🔑 Şifre kontrolü:', { validPassword });
+    console.log('✅ Token oluşturuldu');
 
-    if (!validPassword) {
-      return res.status(401).json({ 
-        message: 'Geçersiz telefon numarası veya şifre',
-        details: {
-          password: 'Geçersiz telefon numarası veya şifre'
-        }
-      });
-    }
-
-    // JWT token oluştur
-    const token = jwt.sign(
-      { userId: user._id },
-      process.env.JWT_SECRET,
-      { expiresIn: '30d' }
-    );
-
-    console.log('✅ Giriş başarılı:', { userId: user._id });
-
-    // Send response
     res.json({
-      message: 'Giriş başarılı',
       token,
       user: {
+        _id: user.id,
         firstName: user.firstName,
         lastName: user.lastName,
         phoneNumber: user.phoneNumber,
         email: user.email
       }
     });
-
-  } catch (error) {
-    console.error('❌ Giriş hatası:', error);
-    res.status(500).json({ 
-      message: 'Giriş yapılırken bir hata oluştu',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
+  } catch (err) {
+    console.error('❌ Login hatası:', err);
+    res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
 

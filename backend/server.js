@@ -2,15 +2,15 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const net = require('net');
 const os = require('os');
 
 // Environment variables
-dotenv.config();
+dotenv.config({ path: './.env' }); // Backend kök dizinindeki .env dosyasını yükleyin
 
 // MongoDB connection string
 const MONGODB_URI = process.env.MONGODB_URI;
 const PORT = parseInt(process.env.PORT || '11000');
+const HOST = process.env.HOST || '0.0.0.0';
 
 if (!MONGODB_URI) {
   console.error('❌ MONGODB_URI environment variable is not set');
@@ -56,7 +56,12 @@ app.use((req, res, next) => {
 
 // Routes
 const authRoutes = require('./routes/auth');
+const hatimRoutes = require('./routes/hatim');
+const userRoutes = require('./routes/user');
+
 app.use('/api/auth', authRoutes);
+app.use('/api/hatim', hatimRoutes);
+app.use('/api/user', userRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -69,50 +74,47 @@ app.get('/api/health', (req, res) => {
 });
 
 // MongoDB connection
-mongoose.connect(MONGODB_URI, {
-  useNewUrlParser: false,
-  useUnifiedTopology: false
-})
-.then(() => {
-  console.log('✅ MongoDB bağlantısı başarılı');
-  
-  // Start server
-  const server = app.listen(PORT, '0.0.0.0', () => {
-    const localIPs = getLocalIPs();
-    console.log(`\n🚀 Server ${PORT} adresinde çalışıyor`);
-    console.log(`   API URL: http://localhost:${PORT}`);
-    console.log(`   API URL (Emulator): http://10.0.2.2:${PORT}`);
-    console.log('\n🌐 Local IPs:');
-    localIPs.forEach(ip => {
-      console.log(`   - http://${ip}:${PORT}`);
-    });
-  });
-
-  // Hata yakalama
-  server.on('error', (error) => {
-    console.error('❌ Sunucu hatası:', error);
-    if (error.code === 'EADDRINUSE') {
-      console.error(`❌ Port ${PORT} zaten kullanımda`);
-    }
-    process.exit(1);
-  });
-
-  // Graceful shutdown
-  process.on('SIGTERM', () => {
-    console.log('⚠️ SIGTERM received. Shutting down gracefully...');
-    server.close(() => {
-      console.log('✅ Server closed');
-      mongoose.connection.close(false, () => {
-        console.log('✅ MongoDB connection closed');
-        process.exit(0);
+mongoose.connect(MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => {
+    console.log('✅ MongoDB bağlantısı başarılı');
+    
+    // Start server
+    const server = app.listen(PORT, HOST, () => {
+      const localIPs = getLocalIPs();
+      console.log(`\n🚀 Server ${PORT} adresinde çalışıyor`);
+      console.log(`   API URL: http://${HOST}:${PORT}`);
+      console.log(`   API URL (Emulator): http://10.0.2.2:${PORT}`);
+      console.log('\n🌐 Local IPs:');
+      localIPs.forEach(ip => {
+        console.log(`   - http://${ip}:${PORT}`);
       });
     });
+
+    // Hata yakalama
+    server.on('error', (error) => {
+      console.error('❌ Sunucu hatası:', error);
+      if (error.code === 'EADDRINUSE') {
+        console.error(`❌ Port ${PORT} zaten kullanımda`);
+      }
+      process.exit(1);
+    });
+
+    // Graceful shutdown
+    process.on('SIGTERM', () => {
+      console.log('⚠️ SIGTERM received. Shutting down gracefully...');
+      server.close(() => {
+        console.log('✅ Server closed');
+        mongoose.connection.close(false, () => {
+          console.log('✅ MongoDB connection closed');
+          process.exit(0);
+        });
+      });
+    });
+  })
+  .catch((err) => {
+    console.error('❌ MongoDB bağlantı hatası:', err);
+    process.exit(1);
   });
-})
-.catch((err) => {
-  console.error('❌ MongoDB bağlantı hatası:', err);
-  process.exit(1);
-});
 
 // Error handling middleware
 app.use((err, req, res, next) => {

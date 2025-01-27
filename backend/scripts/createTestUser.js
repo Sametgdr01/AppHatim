@@ -1,9 +1,8 @@
-require('dotenv').config();
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
 const User = require('../models/User');
+require('dotenv').config();
 
-const createTestUser = async () => {
+async function createTestUser() {
   try {
     // MongoDB'ye bağlan
     await mongoose.connect(process.env.MONGODB_URI);
@@ -15,35 +14,39 @@ const createTestUser = async () => {
       lastName: 'User',
       phoneNumber: '5383733459',
       email: 'test@example.com',
-      password: 'test123'
+      password: '123456'
     };
 
     // Telefon numarasını kontrol et ve varsa sil
-    await User.deleteOne({ phoneNumber: testUser.phoneNumber });
-    console.log('🗑️ Eski test kullanıcısı silindi (varsa)');
-
-    // Şifreyi hashle
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(testUser.password, salt);
+    const existingUser = await User.findOne({ phoneNumber: testUser.phoneNumber });
+    if (existingUser) {
+      console.log('🗑️ Eski test kullanıcısı silindi (varsa)');
+      await User.deleteOne({ phoneNumber: testUser.phoneNumber });
+    }
 
     // Yeni kullanıcı oluştur
-    const user = new User({
-      ...testUser,
-      password: hashedPassword
-    });
+    const user = new User(testUser);
 
     // Kullanıcıyı kaydet
     await user.save();
+
+    // Test amaçlı şifre kontrolü
+    const isMatch = await user.comparePassword(testUser.password);
+    console.log('🔐 Şifre kontrolü:', { isMatch });
+
     console.log('✅ Test kullanıcısı oluşturuldu:', {
-      ...testUser,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phoneNumber: user.phoneNumber,
+      email: user.email,
       password: '***'
     });
+
   } catch (error) {
     console.error('❌ Hata:', error);
   } finally {
     await mongoose.disconnect();
-    process.exit(0);
   }
-};
+}
 
 createTestUser();

@@ -42,6 +42,7 @@ const EditProfile = ({ navigation }) => {
 
       // API'ye güncelleme isteği gönder
       const updatedUser = await api.updateProfile(formData);
+      console.log('Güncellenmiş kullanıcı verisi:', updatedUser);
       
       if (updatedUser) {
         // Context'teki kullanıcı bilgilerini güncelle

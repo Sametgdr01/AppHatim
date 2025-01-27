@@ -127,66 +127,96 @@ class ApiService {
     console.log('✅ API servisi başarıyla başlatıldı');
   }
 
-  // Auth işlemleri
+  // Auth endpoints
   async login(phoneNumber, password) {
-    const response = await this.api.post('/api/auth/login', { phoneNumber, password });
-    return response.data;
+    return this.api.post('/api/auth/login', { phoneNumber, password });
   }
 
   async register(userData) {
-    const response = await this.api.post('/api/auth/register', userData);
-    return response.data;
+    return this.api.post('/api/auth/register', userData);
   }
 
-  async checkPhone(phoneNumber) {
-    const response = await this.api.post('/api/auth/check-phone', { phoneNumber });
-    return response.data;
+  async forgotPassword(phoneNumber) {
+    return this.api.post('/api/auth/forgot-password', { phoneNumber });
   }
 
-  async checkEmail(email) {
-    const response = await this.api.post('/api/auth/check-email', { email });
-    return response.data;
+  async resetPassword(resetData) {
+    return this.api.post('/api/auth/reset-password', resetData);
+  }
+
+  // User endpoints
+  async updateProfile(profileData) {
+    return this.api.put('/api/user/profile', profileData);
+  }
+
+  async updateProfileImage(formData) {
+    return this.api.post('/api/user/profile/image', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+  }
+
+  async getProfile() {
+    return this.api.get('/api/user/profile');
+  }
+
+  // Profil fotoğrafı yükleme
+  async uploadProfileImage(imageUri) {
+    const formData = new FormData();
+    formData.append('file', {
+      uri: imageUri,
+      name: 'profile.jpg',
+      type: 'image/jpeg',
+    });
+
+    return this.api.post('/api/user/profile/image', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  }
+
+  // Hatim endpoints
+  async createHatim(hatimData) {
+    return this.api.post('/api/hatim', hatimData);
+  }
+
+  async getHatimList() {
+    return this.api.get('/api/hatim');
+  }
+
+  async joinHatim(hatimId, cuzNo) {
+    return this.api.post(`/api/hatim/${hatimId}/join`, { cuzNo });
+  }
+
+  async updateCuzStatus(hatimId, cuzNo, status) {
+    return this.api.put(`/api/hatim/${hatimId}/cuz/${cuzNo}`, { status });
+  }
+
+  async getHatimDetails(hatimId) {
+    return this.api.get(`/api/hatim/${hatimId}`);
   }
 
   // Token yönetimi
   setAuthToken(token) {
     this.authToken = token;
     if (token) {
+      console.log('🔑 Token ayarlanıyor:', token);
       this.api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      console.log('🔑 Headers:', this.api.defaults.headers.common);
     } else {
       delete this.api.defaults.headers.common['Authorization'];
+      console.log('🔑 Token silindi');
     }
-    console.log('🔑 Auth token güncellendi:', token ? 'Token set edildi' : 'Token silindi');
   }
 
   getAuthToken() {
     return this.authToken;
   }
 
-  async forgotPassword(email) {
-    try {
-      console.log('🔑 Şifre sıfırlama isteği gönderiliyor...');
-      const response = await this.api.post('/api/auth/forgot-password', { email });
-      return response.data;
-    } catch (error) {
-      console.error('❌ Şifre sıfırlama hatası:', error.message);
-      throw error;
-    }
-  }
-
-  async resetPassword(email, resetCode, newPassword) {
-    try {
-      console.log('🔑 Şifre değiştiriliyor...');
-      const response = await this.api.post('/api/auth/reset-password', {
-        email,
-        resetCode,
-        newPassword
-      });
-      return response.data;
-    } catch (error) {
-      console.error('❌ Şifre değiştirme hatası:', error.message);
-      throw error;
-    }
+  handleApiError(error) {
+    console.error('❌ API hatası:', error.message);
   }
 }
 

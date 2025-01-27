@@ -1,73 +1,177 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
-import { Surface, Text, Title, Button, Portal, Modal, RadioButton } from 'react-native-paper';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { Surface, Text, Title, Button } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { markJuzAsCompleted, fetchJuzDetails, deleteJuz } from '../services/apiService';
 
 const JuzDetailScreen = ({ route, navigation }) => {
-  const [visible, setVisible] = useState(false);
-  const [selectedJuz, setSelectedJuz] = useState(null);
-  const juzList = Array.from({ length: 30 }, (_, i) => i + 1);
+  const { juzId } = route.params;
+  const [juzDetails, setJuzDetails] = useState(null);
+  const [isJuzCompleted, setIsJuzCompleted] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const showModal = () => setVisible(true);
-  const hideModal = () => setVisible(false);
+  useEffect(() => {
+    const loadJuzDetails = async () => {
+      try {
+        const details = await fetchJuzDetails(juzId);
+        console.log('Juz Detayları:', details);
+        
+        setJuzDetails(details);
+        setIsJuzCompleted(details.isCompleted);
+        setLoading(false);
+      } catch (error) {
+        console.error('Cüz detayları yüklenirken hata:', error);
+        Alert.alert('Hata', 'Cüz detayları yüklenemedi.');
+        setLoading(false);
+      }
+    };
 
-  const handleJuzSelection = () => {
-    if (selectedJuz) {
-      // Burada seçilen cüzü kaydetme işlemi yapılacak
-      hideModal();
-      // API call yapılacak
+    loadJuzDetails();
+  }, [juzId]);
+
+  const handleMarkJuzCompleted = async () => {
+    try {
+      Alert.alert(
+        'Cüzü Tamamla',
+        'Bu cüzü tamamladığınızdan emin misiniz?',
+        [
+          {
+            text: 'İptal',
+            style: 'cancel',
+          },
+          {
+            text: 'Evet, Tamamladım',
+            onPress: async () => {
+              try {
+                await markJuzAsCompleted(juzId);
+                setIsJuzCompleted(true);
+                
+                Alert.alert(
+                  'Tebrikler!', 
+                  'Cüz başarıyla tamamlandı.',
+                  [{ text: 'Tamam' }]
+                );
+              } catch (error) {
+                Alert.alert('Hata', 'Cüz tamamlanamadı. Lütfen tekrar deneyin.');
+              }
+            },
+          },
+        ]
+      );
+    } catch (error) {
+      Alert.alert('Hata', 'Bir sorun oluştu.');
     }
   };
+
+  const handleDeleteJuz = async () => {
+    try {
+      Alert.alert(
+        'Cüzü Sil',
+        'Bu cüzü silmek istediğinizden emin misiniz?',
+        [
+          {
+            text: 'İptal',
+            style: 'cancel',
+          },
+          {
+            text: 'Evet, Sil',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                // Silme işlemi öncesi kontrol
+                if (isJuzCompleted) {
+                  Alert.alert('Hata', 'Tamamlanmış cüz silinemez.');
+                  return;
+                }
+
+                await deleteJuz(juzId);
+                
+                Alert.alert(
+                  'Başarılı', 
+                  'Cüz başarıyla silindi.',
+                  [
+                    {
+                      text: 'Tamam',
+                      onPress: () => navigation.goBack() // Önceki sayfaya dön
+                    }
+                  ]
+                );
+              } catch (error) {
+                Alert.alert('Hata', 'Cüz silinemedi. Lütfen tekrar deneyin.');
+              }
+            },
+          },
+        ]
+      );
+    } catch (error) {
+      Alert.alert('Hata', 'Bir sorun oluştu.');
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text>Yükleniyor...</Text>
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.container}>
       <Surface style={styles.headerCard}>
-        <Title style={styles.headerTitle}>Cüz Detayı</Title>
-        <Button
-          mode="contained"
-          onPress={showModal}
-          style={styles.selectButton}
-        >
-          Cüz Seç
-        </Button>
+        <Title style={styles.headerTitle}>
+          {juzDetails ? `${juzDetails.juzNumber}. Cüz Detayları` : 'Cüz Detayı'}
+        </Title>
       </Surface>
 
-      <Portal>
-        <Modal
-          visible={visible}
-          onDismiss={hideModal}
-          contentContainerStyle={styles.modalContainer}
-        >
-          <Title style={styles.modalTitle}>Cüz Seçin</Title>
-          <ScrollView style={styles.juzList}>
-            <RadioButton.Group
-              onValueChange={value => setSelectedJuz(value)}
-              value={selectedJuz}
-            >
-              {juzList.map((juz) => (
-                <View key={juz} style={styles.radioOption}>
-                  <RadioButton.Item
-                    label={`${juz}. Cüz`}
-                    value={juz}
-                    labelStyle={styles.radioLabel}
-                  />
-                </View>
-              ))}
-            </RadioButton.Group>
-          </ScrollView>
-          <View style={styles.modalActions}>
-            <Button onPress={hideModal} style={styles.modalButton}>İptal</Button>
-            <Button
-              mode="contained"
-              onPress={handleJuzSelection}
-              style={styles.modalButton}
-              disabled={!selectedJuz}
-            >
-              Seç
-            </Button>
+      {/* Cüz Detayları Kartı */}
+      {juzDetails && (
+        <Surface style={styles.detailCard}>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Başlangıç Sayfası:</Text>
+            <Text style={styles.detailValue}>{juzDetails.startPage}</Text>
           </View>
-        </Modal>
-      </Portal>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Bitiş Sayfası:</Text>
+            <Text style={styles.detailValue}>{juzDetails.endPage}</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Toplam Sayfa:</Text>
+            <Text style={styles.detailValue}>{juzDetails.endPage - juzDetails.startPage + 1}</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Durum:</Text>
+            <Text 
+              style={[
+                styles.detailValue, 
+                { color: isJuzCompleted ? '#4CAF50' : '#FF9800' }
+              ]}
+            >
+              {isJuzCompleted ? 'Tamamlandı' : 'Devam Ediyor'}
+            </Text>
+          </View>
+        </Surface>
+      )}
+
+      {/* Eylem Butonları */}
+      <View style={styles.actionContainer}>
+        {!isJuzCompleted && (
+          <>
+            <TouchableOpacity 
+              style={styles.completeButton}
+              onPress={handleMarkJuzCompleted}
+            >
+              <Text style={styles.buttonText}>Cüzü Tamamla</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.deleteButton}
+              onPress={handleDeleteJuz}
+            >
+              <Text style={styles.buttonText}>Cüzü Sil</Text>
+            </TouchableOpacity>
+          </>
+        )}
+      </View>
     </ScrollView>
   );
 };
@@ -76,6 +180,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerCard: {
     margin: 16,
@@ -86,38 +195,55 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 24,
-    marginBottom: 16,
+    textAlign: 'center',
   },
-  selectButton: {
-    marginTop: 8,
-  },
-  modalContainer: {
-    backgroundColor: 'white',
-    margin: 20,
+  detailCard: {
+    margin: 16,
+    padding: 16,
     borderRadius: 12,
-    padding: 20,
-    maxHeight: '80%',
+    backgroundColor: 'white',
+    elevation: 2,
   },
-  modalTitle: {
-    marginBottom: 16,
-  },
-  juzList: {
-    maxHeight: 400,
-  },
-  radioOption: {
-    marginBottom: 8,
-  },
-  radioLabel: {
-    fontSize: 16,
-  },
-  modalActions: {
+  detailRow: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: 16,
+    justifyContent: 'space-between',
+    marginBottom: 10,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
   },
-  modalButton: {
-    marginLeft: 8,
+  detailLabel: {
+    fontSize: 16,
+    color: '#666',
+  },
+  detailValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  actionContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    margin: 16,
+  },
+  completeButton: {
+    backgroundColor: '#4CAF50',
+    padding: 12,
+    borderRadius: 8,
+    flex: 1,
+    marginRight: 8,
+    alignItems: 'center',
+  },
+  deleteButton: {
+    backgroundColor: 'red',
+    padding: 12,
+    borderRadius: 8,
+    flex: 1,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: 'white',
+    fontWeight: 'bold',
   },
 });
 
-export default JuzDetailScreen; 
+export default JuzDetailScreen;

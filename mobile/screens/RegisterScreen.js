@@ -86,7 +86,7 @@ const RegisterScreen = ({ navigation, route }) => {
       console.log('📱 Formatlanmış telefon:', formattedPhone);
 
       // Kayıt verilerini hazırla
-      const registerData = {
+      const userData = {
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
         phoneNumber: formattedPhone,
@@ -94,22 +94,19 @@ const RegisterScreen = ({ navigation, route }) => {
         password: formData.password
       };
 
-      console.log('📝 Kayıt verileri:', { ...registerData, password: '***' });
+      console.log('📝 Kayıt verileri:', { ...userData, password: '***' });
 
       // Email kontrolü
       console.log('📧 Email kontrolü yapılıyor...');
-      await register(registerData);
+      const response = await register(userData);
+      console.log('✅ Kayıt başarılı:', response);
 
-      Alert.alert(
-        'Başarılı',
-        'Kaydınız başarıyla tamamlandı!',
-        [
-          {
-            text: 'Tamam',
-            onPress: () => navigation.navigate('Login')
-          }
-        ]
-      );
+      // Başarılı kayıt sonrası ana sayfaya yönlendir
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Main' }],
+      });
+
     } catch (error) {
       console.error('❌ Kayıt hatası:', error);
       Alert.alert(

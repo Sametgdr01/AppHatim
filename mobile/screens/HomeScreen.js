@@ -1,191 +1,105 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal } from 'react-native';
-import { Surface, Text, Title, Avatar, ProgressBar } from 'react-native-paper';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { 
+  View, 
+  Text, 
+  ScrollView, 
+  TouchableOpacity, 
+  StyleSheet, 
+  Alert 
+} from 'react-native';
+import { Surface, ProgressBar, ActivityIndicator } from 'react-native-paper';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
-import NotificationService from '../services/NotificationService';
-import SupportModal from '../components/SupportModal';
 
-const HomeScreen = ({ navigation }) => {
-  const { user, isAdmin } = useAuth();
+// API Service
+import apiService from '../services/apiService';
 
-  // Örnek hatim verileri
-  const personalHatimData = {
-    id: 1,
-    number: 5,
-    totalPages: 30,
-    readPages: 15,
-    progress: 0.5,
-    startDate: '15.03.2024',
-    endDate: '15.04.2024',
-    daysLeft: 15,
-    status: 'Devam Ediyor'
-  };
+const HomeScreen = () => {
+  const navigation = useNavigation();
+  const { user } = useAuth();
 
-  const groupHatimData = {
-    id: 2,
-    name: 'Ramazan Hatmi',
-    totalJuz: 30,
-    completedJuz: 18,
-    participants: 15,
-    progress: 0.6,
-    startDate: '15.03.2024',
-    endDate: '15.04.2024'
-  };
-
-  const [specialNightHatim, setSpecialNightHatim] = useState({
-    isActive: true,
-    title: "Miraç Kandili Hatmi",
-    startTime: "20:00",
-    endTime: "21:00",
-    totalParticipants: 30,
-    availableJuz: 12,
-    progress: 0.4,
-    remainingTime: 3600, // 1 saat (saniye cinsinden)
-    status: 'Devam Ediyor'
-  });
-
-  const [supportModalVisible, setSupportModalVisible] = useState(false);
+  // State tanımlamaları
+  const [personalHatimData, setPersonalHatimData] = useState(null);
+  const [groupHatimData, setGroupHatimData] = useState(null);
+  const [specialNightHatim, setSpecialNightHatim] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    let timer;
-    if (specialNightHatim.isActive && specialNightHatim.remainingTime > 0) {
-      timer = setInterval(() => {
-        setSpecialNightHatim(prev => {
-          const updatedTime = prev.remainingTime - 1;
-          return {
-            ...prev,
-            remainingTime: updatedTime,
-            status: updatedTime <= 0 ? 'Tamamlandı' : 'Devam Ediyor'
-          };
-        });
-      }, 1000);
-    }
+    const fetchHomeScreenData = async () => {
+      try {
+        // Kişisel hatim verilerini al
+        const personalHatimResponse = await apiService.fetchHatimList();
+        setPersonalHatimData(personalHatimResponse.data);
 
-    return () => {
-      if (timer) clearInterval(timer);
+        // Özel etkinlikleri al
+        const specialEventsResponse = await apiService.fetchSpecialEvents();
+        setSpecialNightHatim(specialEventsResponse.data[0]); // İlk etkinliği al
+
+        // Kullanıcının grup hatim bilgilerini al
+        const groupHatimResponse = await apiService.fetchGroupHatimDetails(user.groupId);
+        setGroupHatimData(groupHatimResponse.data);
+
+        setLoading(false);
+      } catch (err) {
+        console.error('Ana sayfa verileri alınırken hata:', err);
+        setError(err);
+        setLoading(false);
+      }
     };
-  }, [specialNightHatim.isActive, specialNightHatim.remainingTime]);
 
-  const formatTime = (seconds) => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
-  };
+    fetchHomeScreenData();
+  }, [user.groupId]);
 
-  const handleSpecialNightParticipation = async () => {
-    try {
-      // Kullanıcı bilgilerini al
-      const participantInfo = {
-        userId: user.id,
-        userName: user.fullName || user.name,
-        eventName: specialNightHatim.title,
-        participationTime: new Date().toISOString()
-      };
+  // Yükleme durumu
+  if (loading) {
+    return (
+      <View style={styles.centeredContainer}>
+        <ActivityIndicator animating={true} size="large" />
+        <Text>Veriler yükleniyor...</Text>
+      </View>
+    );
+  }
 
-      // Yöneticilere bildirim gönder
-      await NotificationService.sendAdminNotification({
-        title: 'Yeni Katılım Talebi',
-        body: `${participantInfo.userName}, ${participantInfo.eventName} etkinliğine katılmak istiyor.`
-      });
-
-      // Kullanıcıya bilgilendirme mesajı
-      Alert.alert(
-        'Katılım Talebi Gönderildi',
-        'Yönetici onayından sonra gruba katılabileceksiniz. Size en kısa sürede dönüş yapılacaktır.'
-      );
-    } catch (error) {
-      console.error('Katılım talebi gönderilirken hata:', error);
-      Alert.alert('Hata', 'Katılım talebi gönderilemedi. Lütfen daha sonra tekrar deneyin.');
-    }
-  };
-
-  const handleSupport = () => {
-    setSupportModalVisible(true);
-  };
+  // Hata durumu
+  if (error) {
+    return (
+      <View style={styles.centeredContainer}>
+        <Text style={styles.errorText}>Veriler yüklenirken hata oluştu</Text>
+        <TouchableOpacity onPress={() => {/* Yeniden yükleme işlevi */}}>
+          <Text>Tekrar Dene</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
-    <View style={styles.container}>
-      {/* Destek Popup Modal */}
-      <Modal
-        visible={supportModalVisible}
-        onRequestClose={() => setSupportModalVisible(false)}
-        animationType="slide"
-        transparent={true}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Destek Ol</Text>
-              <TouchableOpacity onPress={() => setSupportModalVisible(false)}>
-                <MaterialCommunityIcons name="close" size={24} color="#000" />
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      <ScrollView 
-        contentContainerStyle={styles.scrollContainer}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Üst Bar - Anasayfa ve Destek Ol */}
-        <Surface style={styles.topBar}>
-          <Text style={styles.pageTitle}>
-            {user ? `${user.firstName} ${user.lastName}` : 'Anasayfa'}
+    <ScrollView style={styles.container}>
+      {/* Hatim bulunmadığında gösterilecek kart */}
+      {(!personalHatimData || personalHatimData.length === 0) && (
+        <Surface style={styles.noHatimCard}>
+          <MaterialCommunityIcons 
+            name="book-open-variant" 
+            size={50} 
+            color="#6200ee" 
+            style={styles.noHatimIcon}
+          />
+          <Text style={styles.noHatimTitle}>Henüz Bir Hatim Oluşturmadınız</Text>
+          <Text style={styles.noHatimSubtitle}>
+            Kur'an-ı Kerim'i hatmetmek için hemen bir hatim başlatın
           </Text>
           <TouchableOpacity 
-            style={styles.supportButton}
-            onPress={handleSupport}
+            style={styles.createHatimButton}
+            onPress={() => navigation.navigate('CreateHatim')}
           >
-            <MaterialCommunityIcons name="heart" size={24} color="#6200ee" />
-            <Text style={styles.supportButtonText}>Destek Ol</Text>
+            <Text style={styles.createHatimButtonText}>Hatim Oluştur</Text>
           </TouchableOpacity>
         </Surface>
+      )}
 
-        {/* Kullanıcı Karşılama Bölümü */}
-        <Surface style={styles.welcomeCard}>
-          <View style={styles.welcomeHeader}>
-            <Avatar.Icon 
-              size={50} 
-              icon="account" 
-              style={styles.avatar}
-            />
-            <View style={styles.welcomeTextContainer}>
-              <Text style={styles.welcomeText}>
-                Mübarek Hoşgeldin,
-              </Text>
-              <Text style={styles.subtitleText}>
-                Günlük Okumanı Yaptın mı?
-              </Text>
-            </View>
-          </View>
-        </Surface>
-
-        {/* Hatim İstatistikleri */}
-        <Surface style={styles.statsCard}>
-          <View style={styles.statsContainer}>
-            <View style={styles.statItem}>
-              <MaterialCommunityIcons name="book-open-variant" size={24} color="#6200ee" />
-              <Text style={styles.statLabel}>Toplam Cüz</Text>
-              <Text style={styles.statValue}>30/30</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <MaterialCommunityIcons name="calendar-check" size={24} color="#6200ee" />
-              <Text style={styles.statLabel}>Günler</Text>
-              <Text style={styles.statValue}>15/30</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <MaterialCommunityIcons name="fire" size={24} color="#6200ee" />
-              <Text style={styles.statLabel}>Seri Gün</Text>
-              <Text style={styles.statValue}>7</Text>
-            </View>
-          </View>
-        </Surface>
-
-        {/* Kişisel Hatim Kartı */}
+      {/* Kişisel Hatim Kartı */}
+      {personalHatimData && personalHatimData.length > 0 && (
         <Surface style={styles.hatimCard}>
           <View style={styles.hatimCardHeader}>
             <MaterialCommunityIcons name="book-open-variant" size={24} color="#6200ee" />
@@ -194,18 +108,23 @@ const HomeScreen = ({ navigation }) => {
           <View style={styles.hatimCardContent}>
             <View style={styles.hatimCardRow}>
               <Text style={styles.hatimCardLabel}>Cüz Numarası</Text>
-              <Text style={styles.hatimCardValue}>{personalHatimData.number}/30</Text>
+              <Text style={styles.hatimCardValue}>
+                {personalHatimData[0]?.currentJuz || '0'}/30
+              </Text>
             </View>
             <View style={styles.hatimCardRow}>
               <Text style={styles.hatimCardLabel}>Okunma Durumu</Text>
-              <Text style={styles.hatimCardValue}>{personalHatimData.status}</Text>
+              <Text style={styles.hatimCardValue}>
+                {personalHatimData[0]?.status || 'Başlamadı'}
+              </Text>
             </View>
             <View style={styles.hatimCardProgressContainer}>
               <Text style={styles.hatimCardProgressLabel}>
-                {personalHatimData.readPages}/{personalHatimData.totalPages} Sayfa
+                {personalHatimData[0]?.readPages || '0'}/
+                {personalHatimData[0]?.totalPages || '604'} Sayfa
               </Text>
               <ProgressBar 
-                progress={personalHatimData.progress} 
+                progress={personalHatimData[0]?.progress || 0} 
                 color="#6200ee" 
                 style={styles.hatimCardProgressBar}
               />
@@ -213,27 +132,37 @@ const HomeScreen = ({ navigation }) => {
             <View style={styles.hatimCardFooter}>
               <View style={styles.hatimCardFooterItem}>
                 <MaterialCommunityIcons name="calendar-start" size={16} color="#666" />
-                <Text style={styles.hatimCardFooterText}>{personalHatimData.startDate}</Text>
+                <Text style={styles.hatimCardFooterText}>
+                  {personalHatimData[0]?.startDate || '-'}
+                </Text>
               </View>
               <View style={styles.hatimCardFooterItem}>
                 <MaterialCommunityIcons name="calendar-end" size={16} color="#666" />
-                <Text style={styles.hatimCardFooterText}>{personalHatimData.endDate}</Text>
+                <Text style={styles.hatimCardFooterText}>
+                  {personalHatimData[0]?.endDate || '-'}
+                </Text>
               </View>
               <View style={styles.hatimCardFooterItem}>
                 <MaterialCommunityIcons name="clock-outline" size={16} color="#666" />
-                <Text style={styles.hatimCardFooterText}>{personalHatimData.daysLeft} Gün Kaldı</Text>
+                <Text style={styles.hatimCardFooterText}>
+                  {personalHatimData[0]?.daysLeft || '0'} Gün Kaldı
+                </Text>
               </View>
             </View>
           </View>
           <TouchableOpacity 
             style={styles.hatimCardDetailButton}
-            onPress={() => navigation.navigate('JuzDetail', { juzId: personalHatimData.id })}
+            onPress={() => navigation.navigate('JuzDetail', { 
+              juzId: personalHatimData[0]?.id 
+            })}
           >
             <Text style={styles.hatimCardDetailButtonText}>Detayları Görüntüle</Text>
           </TouchableOpacity>
         </Surface>
+      )}
 
-        {/* Grup Hatim Kartı */}
+      {/* Grup Hatim Kartı */}
+      {groupHatimData && (
         <Surface style={styles.hatimCard}>
           <View style={styles.hatimCardHeader}>
             <MaterialCommunityIcons name="account-group" size={24} color="#6200ee" />
@@ -242,18 +171,23 @@ const HomeScreen = ({ navigation }) => {
           <View style={styles.hatimCardContent}>
             <View style={styles.hatimCardRow}>
               <Text style={styles.hatimCardLabel}>Hatim Adı</Text>
-              <Text style={styles.hatimCardValue}>{groupHatimData.name}</Text>
+              <Text style={styles.hatimCardValue}>
+                {groupHatimData.name || 'Tanımsız Grup'}
+              </Text>
             </View>
             <View style={styles.hatimCardRow}>
               <Text style={styles.hatimCardLabel}>Katılımcılar</Text>
-              <Text style={styles.hatimCardValue}>{groupHatimData.participants} Kişi</Text>
+              <Text style={styles.hatimCardValue}>
+                {groupHatimData.participants || '0'} Kişi
+              </Text>
             </View>
             <View style={styles.hatimCardProgressContainer}>
               <Text style={styles.hatimCardProgressLabel}>
-                {groupHatimData.completedJuz}/{groupHatimData.totalJuz} Cüz Tamamlandı
+                {groupHatimData.completedJuz || '0'}/
+                {groupHatimData.totalJuz || '30'} Cüz Tamamlandı
               </Text>
               <ProgressBar 
-                progress={groupHatimData.progress} 
+                progress={groupHatimData.progress || 0} 
                 color="#6200ee" 
                 style={styles.hatimCardProgressBar}
               />
@@ -261,51 +195,29 @@ const HomeScreen = ({ navigation }) => {
             <View style={styles.hatimCardFooter}>
               <View style={styles.hatimCardFooterItem}>
                 <MaterialCommunityIcons name="calendar-start" size={16} color="#666" />
-                <Text style={styles.hatimCardFooterText}>{groupHatimData.startDate}</Text>
+                <Text style={styles.hatimCardFooterText}>
+                  {groupHatimData.startDate || '-'}
+                </Text>
               </View>
               <View style={styles.hatimCardFooterItem}>
                 <MaterialCommunityIcons name="calendar-end" size={16} color="#666" />
-                <Text style={styles.hatimCardFooterText}>{groupHatimData.endDate}</Text>
+                <Text style={styles.hatimCardFooterText}>
+                  {groupHatimData.endDate || '-'}
+                </Text>
               </View>
             </View>
           </View>
           <TouchableOpacity 
             style={styles.hatimCardDetailButton}
-            onPress={() => navigation.navigate('GroupDetail', { groupId: groupHatimData.id })}
+            onPress={() => navigation.navigate('GroupDetail', { 
+              groupId: groupHatimData.id 
+            })}
           >
             <Text style={styles.hatimCardDetailButtonText}>Detayları Görüntüle</Text>
           </TouchableOpacity>
         </Surface>
-
-        {/* Özel Gece Hatmi Kartı */}
-        {specialNightHatim.isActive && (
-          <Surface style={styles.specialNightCard}>
-            <View style={styles.specialNightHeader}>
-              <MaterialCommunityIcons name="star" size={24} color="#6200ee" />
-              <Text style={styles.specialNightTitle}>
-                {specialNightHatim.title}
-              </Text>
-            </View>
-            <View style={styles.timerContainer}>
-              <Text style={styles.timerText}>
-                {formatTime(specialNightHatim.remainingTime)}
-              </Text>
-              <ProgressBar
-                progress={(3600 - specialNightHatim.remainingTime) / 3600}
-                color="#6200ee"
-                style={styles.timerProgress}
-              />
-            </View>
-            <TouchableOpacity 
-              style={styles.specialNightButton}
-              onPress={handleSpecialNightParticipation}
-            >
-              <Text style={styles.specialNightButtonText}>Katıl</Text>
-            </TouchableOpacity>
-          </Surface>
-        )}
-      </ScrollView>
-    </View>
+      )}
+    </ScrollView>
   );
 };
 
@@ -314,113 +226,70 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5'
   },
-  scrollContainer: {
-    padding: 16
-  },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  centeredContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    padding: 16,
+  },
+  errorText: {
+    color: 'red',
     marginBottom: 16,
+  },
+  noHatimCard: {
+    margin: 16,
     borderRadius: 12,
-    elevation: 4,
-  },
-  pageTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#6200ee',
-  },
-  supportButton: {
-    flexDirection: 'row',
+    padding: 24,
     alignItems: 'center',
     backgroundColor: '#f0e6ff',
-    padding: 8,
-    borderRadius: 20,
+    elevation: 4,
   },
-  supportButtonText: {
-    marginLeft: 4,
-    color: '#6200ee',
-    fontWeight: 'bold',
+  noHatimIcon: {
+    marginBottom: 16,
   },
-  welcomeCard: {
-    margin: 16,
-    borderRadius: 10,
-    elevation: 3,
-    padding: 16,
-  },
-  welcomeHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  avatar: {
-    backgroundColor: '#6200ee',
-    marginRight: 16,
-  },
-  welcomeTextContainer: {
-    flex: 1,
-  },
-  welcomeText: {
+  noHatimTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#6200ee',
+    marginBottom: 8,
+    textAlign: 'center',
   },
-  subtitleText: {
+  noHatimSubtitle: {
     fontSize: 14,
     color: '#666',
-  },
-  statsCard: {
-    marginHorizontal: 16,
     marginBottom: 16,
-    borderRadius: 10,
-    elevation: 3,
-    padding: 16,
+    textAlign: 'center',
   },
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  createHatimButton: {
+    backgroundColor: '#6200ee',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
   },
-  statItem: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  statDivider: {
-    width: 1,
-    height: '80%',
-    backgroundColor: '#e0e0e0',
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 4,
-  },
-  statValue: {
-    fontSize: 16,
+  createHatimButtonText: {
+    color: 'white',
     fontWeight: 'bold',
-    color: '#6200ee',
-    marginTop: 4,
+    fontSize: 16,
   },
   hatimCard: {
-    marginHorizontal: 16,
-    marginBottom: 16,
-    borderRadius: 10,
-    elevation: 3,
-    padding: 16,
+    margin: 16,
+    borderRadius: 12,
+    padding: 24,
+    backgroundColor: '#f0e6ff',
+    elevation: 4,
   },
   hatimCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   hatimCardTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
-    marginLeft: 8,
     color: '#6200ee',
+    marginLeft: 8,
   },
   hatimCardContent: {
-    marginBottom: 12,
+    marginBottom: 16,
   },
   hatimCardRow: {
     flexDirection: 'row',
@@ -433,117 +302,44 @@ const styles = StyleSheet.create({
   },
   hatimCardValue: {
     fontSize: 14,
-    fontWeight: 'bold',
     color: '#333',
   },
   hatimCardProgressContainer: {
-    marginVertical: 8,
+    marginBottom: 16,
   },
   hatimCardProgressLabel: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#666',
     marginBottom: 4,
   },
   hatimCardProgressBar: {
-    height: 8,
-    borderRadius: 4,
+    height: 4,
+    borderRadius: 2,
   },
   hatimCardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 12,
   },
   hatimCardFooterItem: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   hatimCardFooterText: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#666',
     marginLeft: 4,
   },
   hatimCardDetailButton: {
     backgroundColor: '#6200ee',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
     borderRadius: 8,
-    padding: 12,
-    alignItems: 'center',
-    marginTop: 12,
+    marginTop: 16,
   },
   hatimCardDetailButtonText: {
     color: 'white',
     fontWeight: 'bold',
-  },
-  specialNightCard: {
-    marginHorizontal: 16,
-    marginBottom: 16,
-    borderRadius: 10,
-    elevation: 3,
-    padding: 16,
-    backgroundColor: '#FFF3E0',
-  },
-  specialNightHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  specialNightTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 8,
-    color: '#6200ee',
-  },
-  timerContainer: {
-    alignItems: 'center',
-    marginVertical: 8,
-  },
-  timerText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#6200ee',
-    marginBottom: 8,
-  },
-  timerProgress: {
-    height: 4,
-    width: '100%',
-    borderRadius: 2,
-  },
-  specialNightButton: {
-    backgroundColor: '#FF6B6B',
-    borderRadius: 8,
-    padding: 12,
-    alignItems: 'center',
-    marginTop: 12,
-  },
-  specialNightButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
-  },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    padding: 16,
-  },
-  modalContent: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    overflow: 'hidden',
-    height: '80%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  webview: {
-    flex: 1,
   },
 });
 

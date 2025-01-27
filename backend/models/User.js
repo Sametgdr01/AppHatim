@@ -4,17 +4,17 @@ const bcrypt = require('bcryptjs');
 const userSchema = new mongoose.Schema({
   firstName: {
     type: String,
-    required: [true, 'İsim zorunludur'],
+    required: [true, 'İsim gerekli'],
     trim: true
   },
   lastName: {
     type: String,
-    required: [true, 'Soyisim zorunludur'],
+    required: [true, 'Soyisim gerekli'],
     trim: true
   },
   phoneNumber: {
     type: String,
-    required: [true, 'Telefon numarası zorunludur'],
+    required: [true, 'Telefon numarası gerekli'],
     unique: true,
     trim: true,
     validate: {
@@ -26,10 +26,9 @@ const userSchema = new mongoose.Schema({
   },
   email: {
     type: String,
-    required: [true, 'E-posta zorunludur'],
-    unique: true,
     trim: true,
     lowercase: true,
+    sparse: true,
     validate: {
       validator: function(v) {
         return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
@@ -39,8 +38,24 @@ const userSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: [true, 'Şifre zorunludur'],
+    required: [true, 'Şifre gerekli'],
     minlength: 6
+  },
+  profileImage: {
+    type: String,
+    default: null
+  },
+  role: {
+    type: String,
+    enum: ['user', 'admin', 'superadmin'],
+    default: 'user'
+  },
+  deviceInfo: {
+    brand: String,
+    modelName: String,
+    osName: String,
+    osVersion: String,
+    deviceId: String
   },
   resetPasswordCode: {
     type: String
@@ -51,33 +66,58 @@ const userSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now
   }
 });
 
-// Şifre hashleme middleware
+// Kaydetmeden önce şifreyi hash'le
 userSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) return next();
-  
   try {
+    // Şifre değişmediyse hash'leme
+    if (!this.isModified('password')) {
+      return next();
+    }
+
+    console.log('🔐 Şifre hash\'leniyor:', {
+      password: this.password,
+      isNew: this.isNew,
+      isModified: this.isModified('password')
+    });
+
+    // Şifreyi hash'le
     const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
+    const hashedPassword = await bcrypt.hash(this.password, salt);
+    
+    // Hash'lenmiş şifreyi kaydet
+    this.password = hashedPassword;
+    
+    console.log('✅ Şifre hash\'lendi');
     next();
   } catch (error) {
+    console.error('❌ Şifre hash\'leme hatası:', error);
     next(error);
   }
 });
 
 // Şifre karşılaştırma metodu
 userSchema.methods.comparePassword = async function(candidatePassword) {
-  console.log('🔐 Şifre karşılaştırması:', {
-    candidatePassword,
-    hashedPassword: this.password,
-    candidateLength: candidatePassword.length,
-    hashedLength: this.password.length
-  });
-  const isMatch = await bcrypt.compare(candidatePassword, this.password);
-  console.log('🔐 Karşılaştırma sonucu:', { isMatch });
-  return isMatch;
+  try {
+    console.log('🔐 Şifre karşılaştırması başlıyor:', {
+      candidatePassword,
+      hashedPassword: this.password
+    });
+
+    // Direkt bcrypt.compare kullan
+    const isMatch = await bcrypt.compare(candidatePassword, this.password);
+    console.log('🔐 Karşılaştırma sonucu:', { isMatch });
+    return isMatch;
+  } catch (error) {
+    console.error('❌ Şifre karşılaştırma hatası:', error);
+    return false;
+  }
 };
 
 module.exports = mongoose.model('User', userSchema);
